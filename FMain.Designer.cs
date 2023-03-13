@@ -34,6 +34,9 @@
             TBLog = new TextBox();
             CBLanguage = new ComboBox();
             BtnCancel = new Button();
+            CBTranslate = new CheckBox();
+            CBWebVTT = new CheckBox();
+            CBModel = new ComboBox();
             SuspendLayout();
             // 
             // TBInputFilePath
@@ -58,7 +61,7 @@
             BtnStart.Location = new Point(713, 12);
             BtnStart.Name = "BtnStart";
             BtnStart.Size = new Size(75, 23);
-            BtnStart.TabIndex = 2;
+            BtnStart.TabIndex = 6;
             BtnStart.Text = "執行";
             BtnStart.UseVisualStyleBackColor = true;
             BtnStart.Click += BtnStart_Click;
@@ -70,14 +73,14 @@
             TBLog.Name = "TBLog";
             TBLog.ScrollBars = ScrollBars.Both;
             TBLog.Size = new Size(776, 368);
-            TBLog.TabIndex = 4;
+            TBLog.TabIndex = 8;
             // 
             // CBLanguage
             // 
             CBLanguage.DropDownStyle = ComboBoxStyle.DropDownList;
             CBLanguage.FormattingEnabled = true;
-            CBLanguage.Items.AddRange(new object[] { "中", "英", "日", "韓" });
-            CBLanguage.Location = new Point(12, 41);
+            CBLanguage.Items.AddRange(new object[] { "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su" });
+            CBLanguage.Location = new Point(139, 41);
             CBLanguage.Name = "CBLanguage";
             CBLanguage.Size = new Size(121, 23);
             CBLanguage.TabIndex = 3;
@@ -87,22 +90,57 @@
             BtnCancel.Location = new Point(713, 41);
             BtnCancel.Name = "BtnCancel";
             BtnCancel.Size = new Size(75, 23);
-            BtnCancel.TabIndex = 5;
+            BtnCancel.TabIndex = 7;
             BtnCancel.Text = "取消";
             BtnCancel.UseVisualStyleBackColor = true;
             BtnCancel.Click += BtnCancel_Click;
+            // 
+            // CBTranslate
+            // 
+            CBTranslate.AutoSize = true;
+            CBTranslate.Location = new Point(266, 43);
+            CBTranslate.Name = "CBTranslate";
+            CBTranslate.Size = new Size(86, 19);
+            CBTranslate.TabIndex = 4;
+            CBTranslate.Text = "翻譯成英文";
+            CBTranslate.UseVisualStyleBackColor = true;
+            // 
+            // CBWebVTT
+            // 
+            CBWebVTT.AutoSize = true;
+            CBWebVTT.Location = new Point(358, 43);
+            CBWebVTT.Name = "CBWebVTT";
+            CBWebVTT.Size = new Size(102, 19);
+            CBWebVTT.TabIndex = 5;
+            CBWebVTT.Text = "產生 WebVTT";
+            CBWebVTT.UseVisualStyleBackColor = true;
+            // 
+            // CBModel
+            // 
+            CBModel.DropDownStyle = ComboBoxStyle.DropDownList;
+            CBModel.FormattingEnabled = true;
+            CBModel.Items.AddRange(new object[] { "Tiny", "TinyEn", "Base", "BaseEn", "Small", "SmallEn", "Medium", "MediumEn", "LargeV1", "Large" });
+            CBModel.Location = new Point(12, 41);
+            CBModel.Name = "CBModel";
+            CBModel.Size = new Size(121, 23);
+            CBModel.TabIndex = 2;
             // 
             // FMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(CBModel);
+            Controls.Add(CBWebVTT);
+            Controls.Add(CBTranslate);
             Controls.Add(BtnCancel);
             Controls.Add(CBLanguage);
             Controls.Add(TBLog);
             Controls.Add(BtnStart);
             Controls.Add(BtnSelectInputFile);
             Controls.Add(TBInputFilePath);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             Name = "FMain";
             Text = "字幕檔產生器";
             Load += FMain_Load;
@@ -118,5 +156,8 @@
         private TextBox TBLog;
         private ComboBox CBLanguage;
         private Button BtnCancel;
+        private CheckBox CBTranslate;
+        private CheckBox CBWebVTT;
+        private ComboBox CBModel;
     }
 }

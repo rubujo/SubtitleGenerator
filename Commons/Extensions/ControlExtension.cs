@@ -1,4 +1,4 @@
-﻿namespace SubtitleGenerator;
+﻿namespace SubtitleGenerator.Commons.Extensions;
 
 /// <summary>
 /// Control 的擴充方法
@@ -21,6 +21,22 @@ internal static class ControlExtension
         else
         {
             action();
+        }
+    }
+
+    /// <summary>
+    /// 啟用控制項
+    /// </summary>
+    /// <param name="controls">Control</param>
+    /// <param name="isEnabled">布林值，是否啟用，預設值為 true</param>
+    public static void SetEnabled(this Control[] controls, bool isEnabled = true)
+    {
+        foreach (Control control in controls)
+        {
+            control.InvokeIfRequired(() =>
+            {
+                control.Enabled = isEnabled;
+            });
         }
     }
 }
