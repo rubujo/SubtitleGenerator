@@ -174,23 +174,32 @@ public partial class FMain : Form
                 return;
             }
 
-            ctrlSet1.SetEnabled(false);
-            ctrlSet2.SetEnabled(true);
+            DialogResult dialogResult = MessageBox.Show(
+                "注意！此功能並不是很穩定，有機大機率會造成應用程式崩潰，若要繼續使用，請按「確定」按鈕以繼續。",
+                Text,
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning);
 
-            GlobalCTS = new();
-            GlobalCT = GlobalCTS.Token;
+            if (dialogResult == DialogResult.OK)
+            {
+                ctrlSet1.SetEnabled(false);
+                ctrlSet2.SetEnabled(true);
 
-            TBLog.Clear();
+                GlobalCTS = new();
+                GlobalCT = GlobalCTS.Token;
 
-            PBProgress.Style = ProgressBarStyle.Marquee;
+                TBLog.Clear();
 
-            SetOpenCCVariables();
+                PBProgress.Style = ProgressBarStyle.Marquee;
 
-            // TODO: 2023-03-14 因不明原因，語言偵測總是顯示 en。
-            await DoDetectLanguageg(
-                TBInputFilePath.Text,
-                GetModelType(CBModels.Text),
-                GlobalCT);
+                SetOpenCCVariables();
+
+                // TODO: 2023-03-14 功能表現不是很正常，常態性會回傳 en，有極大機率會發生例外。
+                await DoLanguageDetection(
+                    TBInputFilePath.Text,
+                    GetModelType(CBModels.Text),
+                    GlobalCT);
+            }
         }
         catch (Exception ex)
         {

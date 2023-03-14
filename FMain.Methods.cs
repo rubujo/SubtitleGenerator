@@ -281,13 +281,13 @@ partial class FMain
     }
 
     /// <summary>
-    /// 執行偵測語言
+    /// 執行語言偵測
     /// </summary>
     /// <param name="inputFilePath">字串，檔案的路徑</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Medium</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
-    private async Task DoDetectLanguageg(
+    private async Task DoLanguageDetection(
         string inputFilePath,
         GgmlType ggmlType = GgmlType.Medium,
         CancellationToken cancellationToken = default)
@@ -298,8 +298,6 @@ partial class FMain
 
             string tempFilePath = await Task.Run(async () =>
             {
-                List<SegmentData> segmentDataSet = new();
-
                 string wavfilePath = await ConvertToWavFile(inputFilePath, cancellationToken),
                     modelFilePath = await CheckModelFile(ggmlType, cancellationToken);
 
@@ -315,7 +313,9 @@ partial class FMain
                 WriteLog("正在開始作業……");
                 WriteLog($"使用的模型：{ggmlType}");
 
-                using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
+                byte[] bufferedModel = File.ReadAllBytes(modelFilePath);
+
+                using WhisperFactory whisperFactory = WhisperFactory.FromBuffer(bufferedModel);
                 using WhisperProcessor whisperProcessor = whisperFactory.CreateBuilder().Build();
                 using FileStream fileStream = File.OpenRead(wavfilePath);
 
@@ -329,7 +329,7 @@ partial class FMain
                         "此視訊或音訊檔案的語言識別失敗。" :
                         $"此視訊或音訊檔案的語言是：{detectedLanguage}";
 
-                WriteLog($"偵測結果：{resultMessage}");
+                WriteLog($"偵測語言結果：{resultMessage}");
 
                 return wavfilePath;
             }, cancellationToken);
@@ -400,7 +400,7 @@ partial class FMain
                 WriteLog($"使用的語言：{language}");
                 WriteLog($"使用的抽樣策略：{samplingStrategyType}");
                 WriteLog($"使用 OpenCC：{(EnableOpenCC ? "是" : "否")}");
-                WriteLog($"使用 OpenCC 模式：{GlobalOCCType}");
+                WriteLog($"OpenCC 模式：{GlobalOCCType}");
 
                 using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
 
@@ -680,7 +680,7 @@ partial class FMain
     /// </summary>
     /// <param name="ggmlType">GgmlType</param>
     /// <returns>字串</returns>
-    private string GetModelFileName(GgmlType ggmlType)
+    private static string GetModelFileName(GgmlType ggmlType)
     {
         return ggmlType switch
         {
