@@ -17,11 +17,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            ShowErrMsg(this, ex.ToString());
         }
     }
 
@@ -45,25 +41,119 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            ShowErrMsg(this, ex.ToString());
         }
     }
 
-    private async void BtnStart_Click(object sender, EventArgs e)
+    private void CBLanguages_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            CBEnableSpeedUp2x_CheckedChanged(this, EventArgs.Empty);
+            CBEnableTranslate_CheckedChanged(this, EventArgs.Empty);
+            CBEnableOpenCCS2TWP_CheckedChanged(this, EventArgs.Empty);
+            CBEnableOpenCCTW2SP_CheckedChanged(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void CBEnableTranslate_CheckedChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            if (CBLanguages.Text == "en" && CBEnableTranslate.Checked)
+            {
+                CBEnableTranslate.Checked = false;
+
+                ShowWarnMsg(this, "此選項僅於使用對非 en 語言時可以使用。");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void CBEnableSpeedUp2x_CheckedChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            // 由於 Whisper.dll 會發生例外，故而加入此限制。
+            if (CBLanguages.Text == "自動" && CBEnableSpeedUp2x.Checked)
+            {
+                CBEnableSpeedUp2x.Checked = false;
+
+                ShowWarnMsg(this, "此選項僅於使用對非自動語言時可以使用。");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void CBEnableOpenCCS2TWP_CheckedChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            if (CBLanguages.Text != "zh" && CBEnableOpenCCS2TWP.Checked)
+            {
+                CBEnableOpenCCS2TWP.Checked = false;
+
+                ShowWarnMsg(this, "此選項僅於使用 zh 語言時可以使用。");
+            }
+            else if (CBEnableOpenCCS2TWP.Checked && CBEnableOpenCCTW2SP.Checked)
+            {
+                CBEnableOpenCCTW2SP.Checked = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void CBEnableOpenCCTW2SP_CheckedChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            if (CBLanguages.Text != "zh" && CBEnableOpenCCTW2SP.Checked)
+            {
+                CBEnableOpenCCTW2SP.Checked = false;
+
+                ShowWarnMsg(this, "此選項僅於使用 zh 語言時可以使用。");
+            }
+            else if (CBEnableOpenCCTW2SP.Checked && CBEnableOpenCCS2TWP.Checked)
+            {
+                CBEnableOpenCCS2TWP.Checked = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private async void BtnDetectLanguage_Click(object sender, EventArgs e)
     {
         Control[] ctrlSet1 =
         {
             TBInputFilePath,
             BtnSelectInputFile,
+            CBModels,
+            CBLanguages,
+            CBEnableTranslate,
+            CBSamplingStrategies,
+            CBEnableSpeedUp2x,
+            CBExportWebVTT,
+            CBEnableOpenCCS2TWP,
+            CBEnableOpenCCTW2SP,
             BtnStart,
-            CBModel,
-            CBLanguage,
-            CBTranslate,
-            CBWebVTT
+            BtnDetectLanguage,
+            BtnReset
         };
 
         Control[] ctrlSet2 =
@@ -76,7 +166,7 @@ public partial class FMain : Form
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
                 MessageBox.Show(
-                    "請先選擇檔案。",
+                    "請先選擇視訊或音訊檔案。",
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -84,34 +174,106 @@ public partial class FMain : Form
                 return;
             }
 
-            ctrlSet1.SetEnabled(true);
-            ctrlSet2.SetEnabled(false);
+            ctrlSet1.SetEnabled(false);
+            ctrlSet2.SetEnabled(true);
 
-            cancellationTokenSource = new();
-            cancellationToken = cancellationTokenSource.Token;
+            GlobalCTS = new();
+            GlobalCT = GlobalCTS.Token;
 
             TBLog.Clear();
 
-            await DoTask(
+            PBProgress.Style = ProgressBarStyle.Marquee;
+
+            SetOpenCCVariables();
+
+            // TODO: 2023-03-14 因不明原因，語言偵測總是顯示 en。
+            await DoDetectLanguageg(
                 TBInputFilePath.Text,
-                CBLanguage.Text,
-                CBTranslate.Checked,
-                CBWebVTT.Checked,
-                GetModelType(CBModel.Text),
-                cancellationToken);
+                GetModelType(CBModels.Text),
+                GlobalCT);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            ShowErrMsg(this, ex.ToString());
         }
         finally
         {
             ctrlSet1.SetEnabled(true);
             ctrlSet2.SetEnabled(false);
+
+            PBProgress.Style = ProgressBarStyle.Blocks;
+        }
+    }
+
+    private async void BtnStart_Click(object sender, EventArgs e)
+    {
+        Control[] ctrlSet1 =
+        {
+            TBInputFilePath,
+            BtnSelectInputFile,
+            CBModels,
+            CBLanguages,
+            CBEnableTranslate,
+            CBSamplingStrategies,
+            CBEnableSpeedUp2x,
+            CBExportWebVTT,
+            CBEnableOpenCCS2TWP,
+            CBEnableOpenCCTW2SP,
+            BtnStart,
+            BtnDetectLanguage,
+            BtnReset
+        };
+
+        Control[] ctrlSet2 =
+        {
+            BtnCancel
+        };
+
+        try
+        {
+            if (string.IsNullOrEmpty(TBInputFilePath.Text))
+            {
+                MessageBox.Show(
+                    "請先選擇視訊或音訊檔案。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return;
+            }
+
+            ctrlSet1.SetEnabled(false);
+            ctrlSet2.SetEnabled(true);
+
+            GlobalCTS = new();
+            GlobalCT = GlobalCTS.Token;
+
+            TBLog.Clear();
+
+            PBProgress.Style = ProgressBarStyle.Marquee;
+
+            SetOpenCCVariables();
+
+            await DoFullDetection(
+                TBInputFilePath.Text,
+                CBLanguages.Text,
+                CBEnableTranslate.Checked,
+                CBEnableSpeedUp2x.Checked,
+                CBExportWebVTT.Checked,
+                GetModelType(CBModels.Text),
+                GetSamplingStrategyType(CBSamplingStrategies.Text),
+                GlobalCT);
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+        finally
+        {
+            ctrlSet1.SetEnabled(true);
+            ctrlSet2.SetEnabled(false);
+
+            PBProgress.Style = ProgressBarStyle.Blocks;
         }
     }
 
@@ -119,18 +281,38 @@ public partial class FMain : Form
     {
         try
         {
-            if (!cancellationTokenSource.IsCancellationRequested)
+            if (!GlobalCTS.IsCancellationRequested)
             {
-                cancellationTokenSource.Cancel();
+                GlobalCTS.Cancel();
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void BtnReset_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            EnableOpenCC = false;
+            GlobalOCCType = OpenCCType.None;
+
+            TBInputFilePath.Clear();
+            CBModels.Text = "中";
+            CBLanguages.Text = "zh";
+            CBSamplingStrategies.Text = "預設";
+            CBEnableSpeedUp2x.Checked = false;
+            CBEnableTranslate.Checked = false;
+            CBExportWebVTT.Checked = false;
+            CBEnableOpenCCS2TWP.Checked = false;
+            CBEnableOpenCCTW2SP.Checked = false;
+            TBLog.Clear();
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
         }
     }
 }

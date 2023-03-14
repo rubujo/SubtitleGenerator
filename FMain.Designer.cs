@@ -32,23 +32,31 @@
             BtnSelectInputFile = new Button();
             BtnStart = new Button();
             TBLog = new TextBox();
-            CBLanguage = new ComboBox();
+            CBLanguages = new ComboBox();
             BtnCancel = new Button();
-            CBTranslate = new CheckBox();
-            CBWebVTT = new CheckBox();
-            CBModel = new ComboBox();
+            CBEnableTranslate = new CheckBox();
+            CBExportWebVTT = new CheckBox();
+            CBModels = new ComboBox();
+            LVersion = new Label();
+            CBEnableSpeedUp2x = new CheckBox();
+            CBSamplingStrategies = new ComboBox();
+            BtnReset = new Button();
+            PBProgress = new ProgressBar();
+            CBEnableOpenCCS2TWP = new CheckBox();
+            CBEnableOpenCCTW2SP = new CheckBox();
+            BtnDetectLanguage = new Button();
             SuspendLayout();
             // 
             // TBInputFilePath
             // 
             TBInputFilePath.Location = new Point(12, 12);
             TBInputFilePath.Name = "TBInputFilePath";
-            TBInputFilePath.Size = new Size(614, 23);
+            TBInputFilePath.Size = new Size(647, 23);
             TBInputFilePath.TabIndex = 0;
             // 
             // BtnSelectInputFile
             // 
-            BtnSelectInputFile.Location = new Point(632, 12);
+            BtnSelectInputFile.Location = new Point(665, 12);
             BtnSelectInputFile.Name = "BtnSelectInputFile";
             BtnSelectInputFile.Size = new Size(75, 23);
             BtnSelectInputFile.TabIndex = 1;
@@ -58,83 +66,172 @@
             // 
             // BtnStart
             // 
-            BtnStart.Location = new Point(713, 12);
+            BtnStart.Location = new Point(747, 41);
             BtnStart.Name = "BtnStart";
             BtnStart.Size = new Size(75, 23);
-            BtnStart.TabIndex = 6;
+            BtnStart.TabIndex = 11;
             BtnStart.Text = "執行";
             BtnStart.UseVisualStyleBackColor = true;
             BtnStart.Click += BtnStart_Click;
             // 
             // TBLog
             // 
-            TBLog.Location = new Point(12, 70);
+            TBLog.Location = new Point(12, 99);
             TBLog.Multiline = true;
             TBLog.Name = "TBLog";
             TBLog.ScrollBars = ScrollBars.Both;
-            TBLog.Size = new Size(776, 368);
-            TBLog.TabIndex = 8;
+            TBLog.Size = new Size(809, 339);
+            TBLog.TabIndex = 13;
             // 
-            // CBLanguage
+            // CBLanguages
             // 
-            CBLanguage.DropDownStyle = ComboBoxStyle.DropDownList;
-            CBLanguage.FormattingEnabled = true;
-            CBLanguage.Items.AddRange(new object[] { "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su" });
-            CBLanguage.Location = new Point(139, 41);
-            CBLanguage.Name = "CBLanguage";
-            CBLanguage.Size = new Size(121, 23);
-            CBLanguage.TabIndex = 3;
+            CBLanguages.DropDownStyle = ComboBoxStyle.DropDownList;
+            CBLanguages.FormattingEnabled = true;
+            CBLanguages.Items.AddRange(new object[] { "自動", "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su" });
+            CBLanguages.Location = new Point(139, 41);
+            CBLanguages.Name = "CBLanguages";
+            CBLanguages.Size = new Size(121, 23);
+            CBLanguages.TabIndex = 3;
+            CBLanguages.SelectedIndexChanged += CBLanguages_SelectedIndexChanged;
             // 
             // BtnCancel
             // 
-            BtnCancel.Location = new Point(713, 41);
+            BtnCancel.Location = new Point(746, 70);
             BtnCancel.Name = "BtnCancel";
             BtnCancel.Size = new Size(75, 23);
-            BtnCancel.TabIndex = 7;
+            BtnCancel.TabIndex = 12;
             BtnCancel.Text = "取消";
             BtnCancel.UseVisualStyleBackColor = true;
             BtnCancel.Click += BtnCancel_Click;
             // 
-            // CBTranslate
+            // CBEnableTranslate
             // 
-            CBTranslate.AutoSize = true;
-            CBTranslate.Location = new Point(266, 43);
-            CBTranslate.Name = "CBTranslate";
-            CBTranslate.Size = new Size(86, 19);
-            CBTranslate.TabIndex = 4;
-            CBTranslate.Text = "翻譯成英文";
-            CBTranslate.UseVisualStyleBackColor = true;
+            CBEnableTranslate.AutoSize = true;
+            CBEnableTranslate.Location = new Point(519, 43);
+            CBEnableTranslate.Name = "CBEnableTranslate";
+            CBEnableTranslate.Size = new Size(86, 19);
+            CBEnableTranslate.TabIndex = 6;
+            CBEnableTranslate.Text = "翻譯成英文";
+            CBEnableTranslate.UseVisualStyleBackColor = true;
+            CBEnableTranslate.CheckedChanged += CBEnableTranslate_CheckedChanged;
             // 
-            // CBWebVTT
+            // CBExportWebVTT
             // 
-            CBWebVTT.AutoSize = true;
-            CBWebVTT.Location = new Point(358, 43);
-            CBWebVTT.Name = "CBWebVTT";
-            CBWebVTT.Size = new Size(102, 19);
-            CBWebVTT.TabIndex = 5;
-            CBWebVTT.Text = "產生 WebVTT";
-            CBWebVTT.UseVisualStyleBackColor = true;
+            CBExportWebVTT.AutoSize = true;
+            CBExportWebVTT.Location = new Point(611, 43);
+            CBExportWebVTT.Name = "CBExportWebVTT";
+            CBExportWebVTT.Size = new Size(129, 19);
+            CBExportWebVTT.TabIndex = 7;
+            CBExportWebVTT.Text = "匯出 WebVTT 格式";
+            CBExportWebVTT.UseVisualStyleBackColor = true;
             // 
-            // CBModel
+            // CBModels
             // 
-            CBModel.DropDownStyle = ComboBoxStyle.DropDownList;
-            CBModel.FormattingEnabled = true;
-            CBModel.Items.AddRange(new object[] { "Tiny", "TinyEn", "Base", "BaseEn", "Small", "SmallEn", "Medium", "MediumEn", "LargeV1", "Large" });
-            CBModel.Location = new Point(12, 41);
-            CBModel.Name = "CBModel";
-            CBModel.Size = new Size(121, 23);
-            CBModel.TabIndex = 2;
+            CBModels.DropDownStyle = ComboBoxStyle.DropDownList;
+            CBModels.FormattingEnabled = true;
+            CBModels.Items.AddRange(new object[] { "微小", "微小（英文）", "基礎", "基礎（英文）", "小", "小（英文）", "中", "中（英文）", "大 V1", "大" });
+            CBModels.Location = new Point(12, 41);
+            CBModels.Name = "CBModels";
+            CBModels.Size = new Size(121, 23);
+            CBModels.TabIndex = 2;
+            // 
+            // LVersion
+            // 
+            LVersion.AutoSize = true;
+            LVersion.Location = new Point(12, 448);
+            LVersion.Name = "LVersion";
+            LVersion.Size = new Size(43, 15);
+            LVersion.TabIndex = 14;
+            LVersion.Text = "版本：";
+            // 
+            // CBEnableSpeedUp2x
+            // 
+            CBEnableSpeedUp2x.AutoSize = true;
+            CBEnableSpeedUp2x.Location = new Point(393, 43);
+            CBEnableSpeedUp2x.Name = "CBEnableSpeedUp2x";
+            CBEnableSpeedUp2x.Size = new Size(120, 19);
+            CBEnableSpeedUp2x.TabIndex = 5;
+            CBEnableSpeedUp2x.Text = "啟用 SpeedUp2x";
+            CBEnableSpeedUp2x.UseVisualStyleBackColor = true;
+            CBEnableSpeedUp2x.CheckedChanged += CBEnableSpeedUp2x_CheckedChanged;
+            // 
+            // CBSamplingStrategies
+            // 
+            CBSamplingStrategies.DropDownStyle = ComboBoxStyle.DropDownList;
+            CBSamplingStrategies.FormattingEnabled = true;
+            CBSamplingStrategies.Items.AddRange(new object[] { "預設", "貪婪", "集束搜尋" });
+            CBSamplingStrategies.Location = new Point(266, 41);
+            CBSamplingStrategies.Name = "CBSamplingStrategies";
+            CBSamplingStrategies.Size = new Size(121, 23);
+            CBSamplingStrategies.TabIndex = 4;
+            // 
+            // BtnReset
+            // 
+            BtnReset.Location = new Point(641, 444);
+            BtnReset.Name = "BtnReset";
+            BtnReset.Size = new Size(75, 23);
+            BtnReset.TabIndex = 15;
+            BtnReset.Text = "重設";
+            BtnReset.UseVisualStyleBackColor = true;
+            BtnReset.Click += BtnReset_Click;
+            // 
+            // PBProgress
+            // 
+            PBProgress.Location = new Point(722, 444);
+            PBProgress.Name = "PBProgress";
+            PBProgress.Size = new Size(100, 23);
+            PBProgress.TabIndex = 16;
+            // 
+            // CBEnableOpenCCS2TWP
+            // 
+            CBEnableOpenCCS2TWP.AutoSize = true;
+            CBEnableOpenCCS2TWP.Location = new Point(393, 68);
+            CBEnableOpenCCS2TWP.Name = "CBEnableOpenCCS2TWP";
+            CBEnableOpenCCS2TWP.Size = new Size(144, 19);
+            CBEnableOpenCCS2TWP.TabIndex = 8;
+            CBEnableOpenCCS2TWP.Text = "啟用 OpenCC S2TWP";
+            CBEnableOpenCCS2TWP.UseVisualStyleBackColor = true;
+            CBEnableOpenCCS2TWP.CheckedChanged += CBEnableOpenCCS2TWP_CheckedChanged;
+            // 
+            // CBEnableOpenCCTW2SP
+            // 
+            CBEnableOpenCCTW2SP.AutoSize = true;
+            CBEnableOpenCCTW2SP.Location = new Point(543, 68);
+            CBEnableOpenCCTW2SP.Name = "CBEnableOpenCCTW2SP";
+            CBEnableOpenCCTW2SP.Size = new Size(144, 19);
+            CBEnableOpenCCTW2SP.TabIndex = 9;
+            CBEnableOpenCCTW2SP.Text = "啟用 OpenCC TW2SP";
+            CBEnableOpenCCTW2SP.UseVisualStyleBackColor = true;
+            CBEnableOpenCCTW2SP.CheckedChanged += CBEnableOpenCCTW2SP_CheckedChanged;
+            // 
+            // BtnDetectLanguage
+            // 
+            BtnDetectLanguage.Location = new Point(747, 12);
+            BtnDetectLanguage.Name = "BtnDetectLanguage";
+            BtnDetectLanguage.Size = new Size(75, 23);
+            BtnDetectLanguage.TabIndex = 10;
+            BtnDetectLanguage.Text = "偵測語言";
+            BtnDetectLanguage.UseVisualStyleBackColor = true;
+            BtnDetectLanguage.Click += BtnDetectLanguage_Click;
             // 
             // FMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
-            Controls.Add(CBModel);
-            Controls.Add(CBWebVTT);
-            Controls.Add(CBTranslate);
+            ClientSize = new Size(834, 476);
+            Controls.Add(BtnDetectLanguage);
+            Controls.Add(CBEnableOpenCCTW2SP);
+            Controls.Add(CBEnableOpenCCS2TWP);
+            Controls.Add(PBProgress);
+            Controls.Add(BtnReset);
+            Controls.Add(CBSamplingStrategies);
+            Controls.Add(CBEnableSpeedUp2x);
+            Controls.Add(LVersion);
+            Controls.Add(CBModels);
+            Controls.Add(CBExportWebVTT);
+            Controls.Add(CBEnableTranslate);
             Controls.Add(BtnCancel);
-            Controls.Add(CBLanguage);
+            Controls.Add(CBLanguages);
             Controls.Add(TBLog);
             Controls.Add(BtnStart);
             Controls.Add(BtnSelectInputFile);
@@ -154,10 +251,18 @@
         private Button BtnSelectInputFile;
         private Button BtnStart;
         private TextBox TBLog;
-        private ComboBox CBLanguage;
+        private ComboBox CBLanguages;
         private Button BtnCancel;
-        private CheckBox CBTranslate;
-        private CheckBox CBWebVTT;
-        private ComboBox CBModel;
+        private CheckBox CBEnableTranslate;
+        private CheckBox CBExportWebVTT;
+        private ComboBox CBModels;
+        private Label LVersion;
+        private CheckBox CBEnableSpeedUp2x;
+        private ComboBox CBSamplingStrategies;
+        private Button BtnReset;
+        private ProgressBar PBProgress;
+        private CheckBox CBEnableOpenCCS2TWP;
+        private CheckBox CBEnableOpenCCTW2SP;
+        private Button BtnDetectLanguage;
     }
 }
