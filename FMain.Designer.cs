@@ -30,7 +30,7 @@
         {
             TBInputFilePath = new TextBox();
             BtnSelectInputFile = new Button();
-            BtnStart = new Button();
+            BtnTranscribe = new Button();
             TBLog = new TextBox();
             CBLanguages = new ComboBox();
             BtnCancel = new Button();
@@ -64,15 +64,15 @@
             BtnSelectInputFile.UseVisualStyleBackColor = true;
             BtnSelectInputFile.Click += BtnSelectInputFile_Click;
             // 
-            // BtnStart
+            // BtnTranscribe
             // 
-            BtnStart.Location = new Point(747, 41);
-            BtnStart.Name = "BtnStart";
-            BtnStart.Size = new Size(75, 23);
-            BtnStart.TabIndex = 11;
-            BtnStart.Text = "執行";
-            BtnStart.UseVisualStyleBackColor = true;
-            BtnStart.Click += BtnStart_Click;
+            BtnTranscribe.Location = new Point(747, 41);
+            BtnTranscribe.Name = "BtnTranscribe";
+            BtnTranscribe.Size = new Size(75, 23);
+            BtnTranscribe.TabIndex = 11;
+            BtnTranscribe.Text = "轉錄字幕檔";
+            BtnTranscribe.UseVisualStyleBackColor = true;
+            BtnTranscribe.Click += BtnTranscribe_Click;
             // 
             // TBLog
             // 
@@ -87,7 +87,7 @@
             // 
             CBLanguages.DropDownStyle = ComboBoxStyle.DropDownList;
             CBLanguages.FormattingEnabled = true;
-            CBLanguages.Items.AddRange(new object[] { "自動", "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su" });
+            CBLanguages.Items.AddRange(new object[] { "auto", "en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su" });
             CBLanguages.Location = new Point(139, 41);
             CBLanguages.Name = "CBLanguages";
             CBLanguages.Size = new Size(121, 23);
@@ -107,7 +107,7 @@
             // CBEnableTranslate
             // 
             CBEnableTranslate.AutoSize = true;
-            CBEnableTranslate.Location = new Point(519, 43);
+            CBEnableTranslate.Location = new Point(138, 70);
             CBEnableTranslate.Name = "CBEnableTranslate";
             CBEnableTranslate.Size = new Size(86, 19);
             CBEnableTranslate.TabIndex = 6;
@@ -118,10 +118,10 @@
             // CBExportWebVTT
             // 
             CBExportWebVTT.AutoSize = true;
-            CBExportWebVTT.Location = new Point(611, 43);
+            CBExportWebVTT.Location = new Point(530, 70);
             CBExportWebVTT.Name = "CBExportWebVTT";
             CBExportWebVTT.Size = new Size(129, 19);
-            CBExportWebVTT.TabIndex = 7;
+            CBExportWebVTT.TabIndex = 9;
             CBExportWebVTT.Text = "匯出 WebVTT 格式";
             CBExportWebVTT.UseVisualStyleBackColor = true;
             // 
@@ -129,7 +129,7 @@
             // 
             CBModels.DropDownStyle = ComboBoxStyle.DropDownList;
             CBModels.FormattingEnabled = true;
-            CBModels.Items.AddRange(new object[] { "微小", "微小（英文）", "基礎", "基礎（英文）", "小", "小（英文）", "中", "中（英文）", "大 V1", "大" });
+            CBModels.Items.AddRange(new object[] { "Tiny", "Tiny En", "Base", "Base En", "Small", "Small En", "Medium", "Medium En", "Large V1", "Large" });
             CBModels.Location = new Point(12, 41);
             CBModels.Name = "CBModels";
             CBModels.Size = new Size(121, 23);
@@ -147,7 +147,7 @@
             // CBEnableSpeedUp2x
             // 
             CBEnableSpeedUp2x.AutoSize = true;
-            CBEnableSpeedUp2x.Location = new Point(393, 43);
+            CBEnableSpeedUp2x.Location = new Point(12, 70);
             CBEnableSpeedUp2x.Name = "CBEnableSpeedUp2x";
             CBEnableSpeedUp2x.Size = new Size(120, 19);
             CBEnableSpeedUp2x.TabIndex = 5;
@@ -159,7 +159,7 @@
             // 
             CBSamplingStrategies.DropDownStyle = ComboBoxStyle.DropDownList;
             CBSamplingStrategies.FormattingEnabled = true;
-            CBSamplingStrategies.Items.AddRange(new object[] { "預設", "貪婪", "集束搜尋" });
+            CBSamplingStrategies.Items.AddRange(new object[] { "Default", "Greedy", "Beam search" });
             CBSamplingStrategies.Location = new Point(266, 41);
             CBSamplingStrategies.Name = "CBSamplingStrategies";
             CBSamplingStrategies.Size = new Size(121, 23);
@@ -185,10 +185,10 @@
             // CBEnableOpenCCS2TWP
             // 
             CBEnableOpenCCS2TWP.AutoSize = true;
-            CBEnableOpenCCS2TWP.Location = new Point(393, 68);
+            CBEnableOpenCCS2TWP.Location = new Point(230, 70);
             CBEnableOpenCCS2TWP.Name = "CBEnableOpenCCS2TWP";
             CBEnableOpenCCS2TWP.Size = new Size(144, 19);
-            CBEnableOpenCCS2TWP.TabIndex = 8;
+            CBEnableOpenCCS2TWP.TabIndex = 7;
             CBEnableOpenCCS2TWP.Text = "啟用 OpenCC S2TWP";
             CBEnableOpenCCS2TWP.UseVisualStyleBackColor = true;
             CBEnableOpenCCS2TWP.CheckedChanged += CBEnableOpenCCS2TWP_CheckedChanged;
@@ -196,10 +196,10 @@
             // CBEnableOpenCCTW2SP
             // 
             CBEnableOpenCCTW2SP.AutoSize = true;
-            CBEnableOpenCCTW2SP.Location = new Point(543, 68);
+            CBEnableOpenCCTW2SP.Location = new Point(380, 70);
             CBEnableOpenCCTW2SP.Name = "CBEnableOpenCCTW2SP";
             CBEnableOpenCCTW2SP.Size = new Size(144, 19);
-            CBEnableOpenCCTW2SP.TabIndex = 9;
+            CBEnableOpenCCTW2SP.TabIndex = 8;
             CBEnableOpenCCTW2SP.Text = "啟用 OpenCC TW2SP";
             CBEnableOpenCCTW2SP.UseVisualStyleBackColor = true;
             CBEnableOpenCCTW2SP.CheckedChanged += CBEnableOpenCCTW2SP_CheckedChanged;
@@ -233,7 +233,7 @@
             Controls.Add(BtnCancel);
             Controls.Add(CBLanguages);
             Controls.Add(TBLog);
-            Controls.Add(BtnStart);
+            Controls.Add(BtnTranscribe);
             Controls.Add(BtnSelectInputFile);
             Controls.Add(TBInputFilePath);
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -249,7 +249,7 @@
 
         private TextBox TBInputFilePath;
         private Button BtnSelectInputFile;
-        private Button BtnStart;
+        private Button BtnTranscribe;
         private TextBox TBLog;
         private ComboBox CBLanguages;
         private Button BtnCancel;

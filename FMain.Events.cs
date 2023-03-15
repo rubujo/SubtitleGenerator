@@ -5,10 +5,17 @@ namespace SubtitleGenerator;
 // 阻擋設計工具。
 partial class DesignerBlocker { }
 
+/// <summary>
+/// FMain 的事件
+/// </summary>
 partial class FMain
 {
-    private void OnNewSegment(SegmentData e)
+    /// <summary>
+    /// 在新段
+    /// </summary>
+    /// <param name="segmentData">SegmentData</param>
+    private void OnNewSegment(SegmentData segmentData)
     {
-        WriteLog($"{e.Start} --> {e.End} : {e.Text}");
+        WriteLog($"{segmentData.Start} --> {segmentData.End} : {segmentData.Text}");
     }
 }

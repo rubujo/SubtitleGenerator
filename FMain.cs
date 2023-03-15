@@ -1,4 +1,5 @@
 using SubtitleGenerator.Commons.Extensions;
+using SubtitleGenerator.Commons.Sets;
 
 namespace SubtitleGenerator;
 
@@ -64,6 +65,7 @@ public partial class FMain : Form
     {
         try
         {
+            // 因為英文不需要再翻譯成英文，故加入此限制。
             if (CBLanguages.Text == "en" && CBEnableTranslate.Checked)
             {
                 CBEnableTranslate.Checked = false;
@@ -81,12 +83,12 @@ public partial class FMain : Form
     {
         try
         {
-            // 由於 Whisper.dll 會發生例外，故而加入此限制。
-            if (CBLanguages.Text == "自動" && CBEnableSpeedUp2x.Checked)
+            // 因為會發生 System.AccessViolationException，故加入此限制。
+            if (CBLanguages.Text == "auto" && CBEnableSpeedUp2x.Checked)
             {
                 CBEnableSpeedUp2x.Checked = false;
 
-                ShowWarnMsg(this, "此選項僅於使用對非自動語言時可以使用。");
+                ShowWarnMsg(this, "此選項僅於使用對非 auto 語言時可以使用。");
             }
         }
         catch (Exception ex)
@@ -151,84 +153,7 @@ public partial class FMain : Form
             CBExportWebVTT,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
-            BtnStart,
-            BtnDetectLanguage,
-            BtnReset
-        };
-
-        Control[] ctrlSet2 =
-        {
-            BtnCancel
-        };
-
-        try
-        {
-            if (string.IsNullOrEmpty(TBInputFilePath.Text))
-            {
-                MessageBox.Show(
-                    "請先選擇視訊或音訊檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-
-                return;
-            }
-
-            DialogResult dialogResult = MessageBox.Show(
-                "注意！此功能並不是很穩定，有機大機率會造成應用程式崩潰，若要繼續使用，請按「確定」按鈕以繼續。",
-                Text,
-                MessageBoxButtons.OKCancel,
-                MessageBoxIcon.Warning);
-
-            if (dialogResult == DialogResult.OK)
-            {
-                ctrlSet1.SetEnabled(false);
-                ctrlSet2.SetEnabled(true);
-
-                GlobalCTS = new();
-                GlobalCT = GlobalCTS.Token;
-
-                TBLog.Clear();
-
-                PBProgress.Style = ProgressBarStyle.Marquee;
-
-                SetOpenCCVariables();
-
-                // TODO: 2023-03-14 功能表現不是很正常，常態性會回傳 en，有極大機率會發生例外。
-                await DoLanguageDetection(
-                    TBInputFilePath.Text,
-                    GetModelType(CBModels.Text),
-                    GlobalCT);
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowErrMsg(this, ex.ToString());
-        }
-        finally
-        {
-            ctrlSet1.SetEnabled(true);
-            ctrlSet2.SetEnabled(false);
-
-            PBProgress.Style = ProgressBarStyle.Blocks;
-        }
-    }
-
-    private async void BtnStart_Click(object sender, EventArgs e)
-    {
-        Control[] ctrlSet1 =
-        {
-            TBInputFilePath,
-            BtnSelectInputFile,
-            CBModels,
-            CBLanguages,
-            CBEnableTranslate,
-            CBSamplingStrategies,
-            CBEnableSpeedUp2x,
-            CBExportWebVTT,
-            CBEnableOpenCCS2TWP,
-            CBEnableOpenCCTW2SP,
-            BtnStart,
+            BtnTranscribe,
             BtnDetectLanguage,
             BtnReset
         };
@@ -263,15 +188,87 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
-            await DoFullDetection(
-                TBInputFilePath.Text,
-                CBLanguages.Text,
-                CBEnableTranslate.Checked,
-                CBEnableSpeedUp2x.Checked,
-                CBExportWebVTT.Checked,
-                GetModelType(CBModels.Text),
-                GetSamplingStrategyType(CBSamplingStrategies.Text),
-                GlobalCT);
+            await DetectLanguage(
+                inputFilePath: TBInputFilePath.Text,
+                language: CBLanguages.Text,
+                enableTranslate: CBEnableTranslate.Checked,
+                enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
+                speedUp: false,
+                ggmlType: GetModelType(CBModels.Text),
+                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
+                cancellationToken: GlobalCT);
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+        finally
+        {
+            ctrlSet1.SetEnabled(true);
+            ctrlSet2.SetEnabled(false);
+
+            PBProgress.Style = ProgressBarStyle.Blocks;
+        }
+    }
+
+    private async void BtnTranscribe_Click(object sender, EventArgs e)
+    {
+        Control[] ctrlSet1 =
+        {
+            TBInputFilePath,
+            BtnSelectInputFile,
+            CBModels,
+            CBLanguages,
+            CBEnableTranslate,
+            CBSamplingStrategies,
+            CBEnableSpeedUp2x,
+            CBExportWebVTT,
+            CBEnableOpenCCS2TWP,
+            CBEnableOpenCCTW2SP,
+            BtnTranscribe,
+            BtnDetectLanguage,
+            BtnReset
+        };
+
+        Control[] ctrlSet2 =
+        {
+            BtnCancel
+        };
+
+        try
+        {
+            if (string.IsNullOrEmpty(TBInputFilePath.Text))
+            {
+                MessageBox.Show(
+                    "請先選擇視訊或音訊檔案。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return;
+            }
+
+            ctrlSet1.SetEnabled(false);
+            ctrlSet2.SetEnabled(true);
+
+            GlobalCTS = new();
+            GlobalCT = GlobalCTS.Token;
+
+            TBLog.Clear();
+
+            PBProgress.Style = ProgressBarStyle.Marquee;
+
+            SetOpenCCVariables();
+
+            await Transcribe(
+                inputFilePath: TBInputFilePath.Text,
+                language: CBLanguages.Text,
+                enableTranslate: CBEnableTranslate.Checked,
+                enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
+                exportWebVtt: CBExportWebVTT.Checked,
+                ggmlType: GetModelType(CBModels.Text),
+                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
+                cancellationToken: GlobalCT);
         }
         catch (Exception ex)
         {
@@ -305,13 +302,15 @@ public partial class FMain : Form
     {
         try
         {
+            // 重設變數。
             EnableOpenCC = false;
-            GlobalOCCType = OpenCCType.None;
+            GlobalOCCMode = EnumSet.OpenCCMode.None;
 
+            // 重設控制項。 
             TBInputFilePath.Clear();
-            CBModels.Text = "中";
+            CBModels.Text = "Small";
             CBLanguages.Text = "zh";
-            CBSamplingStrategies.Text = "預設";
+            CBSamplingStrategies.Text = "Default";
             CBEnableSpeedUp2x.Checked = false;
             CBEnableTranslate.Checked = false;
             CBExportWebVTT.Checked = false;
