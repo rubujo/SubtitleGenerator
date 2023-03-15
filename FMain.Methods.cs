@@ -500,6 +500,8 @@ partial class FMain
                 // 開啟資料夾。
                 OpenFolder(subtitleFileFolder);
 
+                ShowMsg(this, "轉錄完成。");
+
                 return wavfilePath;
             }, cancellationToken);
 
