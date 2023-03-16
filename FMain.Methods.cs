@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
 using Whisper.net.Ggml;
-using Whisper.net;
 using Xabe.FFmpeg.Downloader;
 using Xabe.FFmpeg.Events;
 using Xabe.FFmpeg;
@@ -319,8 +318,6 @@ partial class FMain
 
             string tempFilePath = await Task.Run(async () =>
             {
-                List<SegmentData> segmentDataSet = new();
-
                 string wavfilePath = enableConvertToWav ?
                     await ConvertToWavFile(inputFilePath, cancellationToken) :
                     inputFilePath,
