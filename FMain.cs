@@ -1,6 +1,5 @@
 using SubtitleGenerator.Commons.Extensions;
-using SubtitleGenerator.Commons.Sets;
-using Whisper;
+using static SubtitleGenerator.Commons.Sets.EnumSet;
 
 namespace SubtitleGenerator;
 
@@ -54,6 +53,22 @@ public partial class FMain : Form
             CBEnableTranslate_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCS2TWP_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCTW2SP_CheckedChanged(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    private void CBSamplingStrategies_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        try
+        {
+            // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內尚未實作此策略。。
+            if (CBSamplingStrategies.Text == "Beam search")
+            {
+                ShowErrMsg(this, "Const-me/Whisper 函式庫內尚未實作此抽樣策略。");
+            }
         }
         catch (Exception ex)
         {
@@ -127,13 +142,18 @@ public partial class FMain : Form
         {
             TBInputFilePath,
             BtnSelectInputFile,
+            CBModelImplementation,
+            CBGPUs,
+            CBGpuModelFlags,
             CBModels,
-            CBLanguages,
-            CBEnableTranslate,
             CBSamplingStrategies,
-            CBExportWebVTT,
+            CBLanguages,
+            CBEnableSpeedUpAudio,
+            CBEnableTranslate,
+            CBConvertToWav,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
+            CBExportWebVTT,
             BtnTranscribe,
             BtnReset
         };
@@ -148,7 +168,7 @@ public partial class FMain : Form
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
                 MessageBox.Show(
-                    "請先選擇視訊或音訊檔案。",
+                    "請先選擇要轉錄的視訊或音訊檔案。",
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -172,12 +192,12 @@ public partial class FMain : Form
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
-                enableSpeedUpAudio: false,
+                enableSpeedUpAudio: CBEnableSpeedUpAudio.Checked,
                 exportWebVtt: CBExportWebVTT.Checked,
-                enableConvertToWav: false,
-                modelImplementation: eModelImplementation.GPU,
-                gpuModelFlags: eGpuModelFlags.None,
-                adapter: null,
+                enableConvertToWav: CBConvertToWav.Checked,
+                modelImplementation: GetModelImplementation(CBModelImplementation.Text),
+                gpuModelFlags: GetGpuModelFlag(CBGpuModelFlags.Text),
+                adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
                 ggmlType: GetModelType(CBModels.Text),
                 samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
@@ -216,17 +236,27 @@ public partial class FMain : Form
         {
             // 重設變數。
             EnableOpenCC = false;
-            GlobalOCCMode = EnumSet.OpenCCMode.None;
+            GlobalOCCMode = OpenCCMode.None;
 
             // 重設控制項。 
             TBInputFilePath.Clear();
+            CBModelImplementation.Text = "GPU";
+
+            if (CBGPUs.Items.Count > 0)
+            {
+                CBGPUs.SelectedIndex = 0;
+            }
+
+            CBGpuModelFlags.Text = "Wave32";
             CBModels.Text = "Small";
-            CBLanguages.Text = "zh";
             CBSamplingStrategies.Text = "Default";
+            CBLanguages.Text = "zh";
+            CBEnableSpeedUpAudio.Checked = false;
             CBEnableTranslate.Checked = false;
-            CBExportWebVTT.Checked = false;
+            CBConvertToWav.Checked = false;
             CBEnableOpenCCS2TWP.Checked = false;
             CBEnableOpenCCTW2SP.Checked = false;
+            CBExportWebVTT.Checked = false;
             TBLog.Clear();
         }
         catch (Exception ex)

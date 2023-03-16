@@ -10,6 +10,7 @@ using OpenCCNET;
 using SubtitleGenerator.Commons.Sets;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
 using Whisper;
+using SubtitleGenerator.Commons;
 
 namespace SubtitleGenerator;
 
@@ -33,17 +34,31 @@ partial class FMain
         });
 
         // 設定控制項的工具提示。
-        GlobalTT.SetToolTip(CBLanguages, "語言");
+        GlobalTT.SetToolTip(CBModelImplementation, "模型實作");
+        GlobalTT.SetToolTip(CBGPUs, "GPU 裝置");
+        GlobalTT.SetToolTip(CBGpuModelFlags, "GPU 模型旗標");
         GlobalTT.SetToolTip(CBModels, "模型");
         GlobalTT.SetToolTip(CBSamplingStrategies, "抽樣策略");
+        GlobalTT.SetToolTip(CBLanguages, "語言");
         GlobalTT.SetToolTip(CBEnableTranslate, "將轉錄的內容翻譯成英文");
+        GlobalTT.SetToolTip(CBConvertToWav, "先透過 FFmpeg 將選擇的檔案轉換成 WAV 格式的暫時檔案後，在進行轉錄");
         GlobalTT.SetToolTip(CBEnableOpenCCS2TWP, "使用 OpenCC 將轉錄的內容，從「簡體中文」轉換成「繁體中文（臺灣）」");
         GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉錄的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
 
         // 設定控制項。
         CBModels.Text = "Small";
-        CBLanguages.Text = "zh";
         CBSamplingStrategies.Text = "Default";
+        CBLanguages.Text = "zh";
+        CBModelImplementation.Text = "GPU";
+
+        CBGPUs.DataSource = GetGpuList();
+
+        if (CBGPUs.Items.Count > 0)
+        {
+            CBGPUs.SelectedIndex = 0;
+        }
+
+        CBGpuModelFlags.Text = "Wave32";
         BtnCancel.Enabled = false;
 
         // 檢查資料夾。
@@ -321,18 +336,25 @@ partial class FMain
                 string wavfilePath = enableConvertToWav ?
                     await ConvertToWavFile(inputFilePath, cancellationToken) :
                     inputFilePath,
-                    modelFilePath = await CheckModelFile(ggmlType, cancellationToken);
+                    modelFilePath = await CheckModelFile(ggmlType, cancellationToken),
+                    modelFileName = Path.GetFileName(modelFilePath);
 
                 if (string.IsNullOrEmpty(modelFilePath))
                 {
-                    WriteLog("發生錯誤：使用的模型檔案不存在或下載失敗。");
-                    WriteLog("已取消作業。");
-                    WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+                    WriteLog($"發生錯誤：使用的模型檔案 {modelFileName} 不存在或下載失敗。");
+                    WriteLog("已取消轉錄作業。");
+
+                    if (enableConvertToWav)
+                    {
+                        WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+                    }
 
                     return string.Empty;
                 }
 
-                WriteLog("正在開始作業……");
+                WriteLog($"使用的模型實作：{modelImplementation}");
+                WriteLog($"使用的 GPU 裝置：{adapter ?? "預設"}");
+                WriteLog($"使用的 GPU 模型旗標：{gpuModelFlags}");
                 WriteLog($"使用的模型：{ggmlType}");
                 WriteLog($"使用的語言：{language}");
                 WriteLog($"使用的抽樣策略：{samplingStrategyType}");
@@ -345,14 +367,14 @@ partial class FMain
 
                 Action<double> pfnProgress = new((value) =>
                 {
-                    double actualPercent = Math.Round(value * 100, 2, MidpointRounding.AwayFromZero);
+                    double actualPercent = Math.Round(value * 100, 1, MidpointRounding.AwayFromZero);
 
                     // 減速機制。
                     int parsePercent = Convert.ToInt32(actualPercent);
 
                     if (parsePercent > tempPercent)
                     {
-                        WriteLog($"{actualPercent}%");
+                        WriteLog($"載入進度：{actualPercent}%");
 
                         tempPercent = parsePercent;
                     }
@@ -361,11 +383,11 @@ partial class FMain
                     {
                         isFinished = true;
 
-                        WriteLog("模型檔案載入完成。");
+                        WriteLog($"模型檔案 {modelFileName} 載入完成。");
                     }
                 });
 
-                WriteLog("正在開始載入模型檔案……");
+                WriteLog($"正在開始載入模型檔案 {modelFileName} ……");
 
                 using iModel model = await Library.loadModelAsync(
                     path: modelFilePath,
@@ -404,7 +426,7 @@ partial class FMain
 
                         break;
                     case SamplingStrategyType.BeamSearch:
-                        // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內尚未實作。
+                        // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內尚未實作此抽樣策略。。
                         context.parameters.strategy = eSamplingStrategy.BeamSearch;
 
                         // TODO: 2023-03-16 待看未來是否要開放可以自己設定。
@@ -423,11 +445,13 @@ partial class FMain
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                WriteLog("正在開始轉錄……");
+                WriteLog("正在開始轉錄作業……");
 
-                context.runFull(audioBuffer);
+                CustomCallbacks customCallbacks = new(this, cancellationToken);
 
-                WriteLog("轉錄完成。");
+                context.runFull(buffer: audioBuffer, callbacks: customCallbacks);
+
+                WriteLog("轉錄作業完成。");
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -440,10 +464,10 @@ partial class FMain
                     subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
                         .Replace(subtitleFileName, string.Empty);
 
-                // 開啟資料夾。
-                OpenFolder(subtitleFileFolder);
+                ShowMsg(this, "轉錄作業完成。");
 
-                ShowMsg(this, "轉錄完成。");
+                // 開啟字幕檔所位於的資料夾。
+                OpenFolder(subtitleFileFolder);
 
                 return wavfilePath;
             }, cancellationToken);
@@ -462,11 +486,33 @@ partial class FMain
         }
         catch (OperationCanceledException)
         {
-            WriteLog("已取消作業。");
-            WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+            WriteLog("已取消轉錄作業。");
+
+            if (enableConvertToWav)
+            {
+                WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+            }
+        }
+        catch (ApplicationException ae)
+        {
+            WriteLog("已取消轉錄作業。");
+
+            if (enableConvertToWav)
+            {
+                WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+            }
+
+            ShowErrMsg(this, ae.Message);
         }
         catch (Exception ex)
         {
+            WriteLog("已取消轉錄作業。");
+
+            if (enableConvertToWav)
+            {
+                WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+            }
+
             ShowErrMsg(this, ex.ToString());
         }
     }
@@ -542,6 +588,15 @@ partial class FMain
                 _ => segment.text
             } :
             segment.text;
+    }
+
+    /// <summary>
+    /// 取得 GPU 裝置清單
+    /// </summary>
+    /// <returns>字串陣列</returns>
+    private static string[] GetGpuList()
+    {
+        return Library.listGraphicAdapters();
     }
 
     /// <summary>
@@ -631,11 +686,44 @@ partial class FMain
     }
 
     /// <summary>
+    /// 取得 GPU 模型旗標
+    /// </summary>
+    /// <param name="value">字串</param>
+    /// <returns>eGpuModelFlags</returns>
+    private static eGpuModelFlags GetGpuModelFlag(string value)
+    {
+        return value switch
+        {
+            "Wave32" => eGpuModelFlags.Wave32 | eGpuModelFlags.NoReshapedMatMul,
+            "Wave64" => eGpuModelFlags.Wave64 | eGpuModelFlags.NoReshapedMatMul,
+            "Wave32 (重塑矩陣乘法)" => eGpuModelFlags.Wave32 | eGpuModelFlags.UseReshapedMatMul,
+            "Wave64 (重塑矩陣乘法)" => eGpuModelFlags.Wave64 | eGpuModelFlags.UseReshapedMatMul,
+            _ => eGpuModelFlags.None
+        };
+    }
+
+    /// <summary>
+    /// 取得模型實作
+    /// </summary>
+    /// <param name="value">字串</param>
+    /// <returns>eModelImplementation</returns>
+    private static eModelImplementation GetModelImplementation(string value)
+    {
+        return value switch
+        {
+            "GPU" => eModelImplementation.GPU,
+            "Hybrid" => eModelImplementation.Hybrid,
+            "Reference" => eModelImplementation.Reference,
+            _ => eModelImplementation.GPU
+        };
+    }
+
+    /// <summary>
     /// 列印時間（點）
     /// </summary>
     /// <param name="timeSpan">TimeSpan</param>
     /// <returns>字串</returns>
-    private static string PrintTime(TimeSpan timeSpan) =>
+    public static string PrintTime(TimeSpan timeSpan) =>
         timeSpan.ToString("hh':'mm':'ss'.'fff", CultureInfo.InvariantCulture);
 
     /// <summary>
@@ -643,7 +731,7 @@ partial class FMain
     /// </summary>
     /// <param name="timeSpan">TimeSpan</param>
     /// <returns>字串</returns>
-    private static string PrintTimeWithComma(TimeSpan timeSpan) =>
+    public static string PrintTimeWithComma(TimeSpan timeSpan) =>
         timeSpan.ToString("hh':'mm':'ss','fff", CultureInfo.InvariantCulture);
 
     /// <summary>
@@ -728,7 +816,7 @@ partial class FMain
     /// 寫紀錄
     /// </summary>
     /// <param name="message">字串，訊息內容</param>
-    private void WriteLog(string message)
+    public void WriteLog(string message)
     {
         if (string.IsNullOrEmpty(message))
         {
