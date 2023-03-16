@@ -1,6 +1,4 @@
-﻿using Whisper.net.Ggml;
-
-namespace SubtitleGenerator.Whisper.net.Ggml;
+﻿namespace Whisper.net.Ggml;
 
 /// <summary>
 /// 自定義 WhisperGgmlDownloader
@@ -8,7 +6,7 @@ namespace SubtitleGenerator.Whisper.net.Ggml;
 /// </summary>
 public static class CustomWhisperGgmlDownloader
 {
-    private static readonly Lazy<HttpClient> httpClient = new(() => new HttpClient() 
+    private static readonly Lazy<HttpClient> httpClient = new(() => new HttpClient()
     {
         Timeout = Timeout.InfiniteTimeSpan
     });

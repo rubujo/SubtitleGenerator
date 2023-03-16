@@ -1,5 +1,6 @@
 using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Sets;
+using Whisper;
 
 namespace SubtitleGenerator;
 
@@ -50,7 +51,6 @@ public partial class FMain : Form
     {
         try
         {
-            CBEnableSpeedUp2x_CheckedChanged(this, EventArgs.Empty);
             CBEnableTranslate_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCS2TWP_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCTW2SP_CheckedChanged(this, EventArgs.Empty);
@@ -71,24 +71,6 @@ public partial class FMain : Form
                 CBEnableTranslate.Checked = false;
 
                 ShowWarnMsg(this, "此選項僅於使用對非 en 語言時可以使用。");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowErrMsg(this, ex.ToString());
-        }
-    }
-
-    private void CBEnableSpeedUp2x_CheckedChanged(object sender, EventArgs e)
-    {
-        try
-        {
-            // 因為會發生 System.AccessViolationException，故加入此限制。
-            if (CBLanguages.Text == "auto" && CBEnableSpeedUp2x.Checked)
-            {
-                CBEnableSpeedUp2x.Checked = false;
-
-                ShowWarnMsg(this, "此選項僅於使用對非 auto 語言時可以使用。");
             }
         }
         catch (Exception ex)
@@ -139,78 +121,6 @@ public partial class FMain : Form
         }
     }
 
-    private async void BtnDetectLanguage_Click(object sender, EventArgs e)
-    {
-        Control[] ctrlSet1 =
-        {
-            TBInputFilePath,
-            BtnSelectInputFile,
-            CBModels,
-            CBLanguages,
-            CBEnableTranslate,
-            CBSamplingStrategies,
-            CBEnableSpeedUp2x,
-            CBExportWebVTT,
-            CBEnableOpenCCS2TWP,
-            CBEnableOpenCCTW2SP,
-            BtnTranscribe,
-            BtnDetectLanguage,
-            BtnReset
-        };
-
-        Control[] ctrlSet2 =
-        {
-            BtnCancel
-        };
-
-        try
-        {
-            if (string.IsNullOrEmpty(TBInputFilePath.Text))
-            {
-                MessageBox.Show(
-                    "請先選擇視訊或音訊檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-
-                return;
-            }
-
-            ctrlSet1.SetEnabled(false);
-            ctrlSet2.SetEnabled(true);
-
-            GlobalCTS = new();
-            GlobalCT = GlobalCTS.Token;
-
-            TBLog.Clear();
-
-            PBProgress.Style = ProgressBarStyle.Marquee;
-
-            SetOpenCCVariables();
-
-            await DetectLanguage(
-                inputFilePath: TBInputFilePath.Text,
-                language: CBLanguages.Text,
-                enableTranslate: CBEnableTranslate.Checked,
-                enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
-                speedUp: false,
-                ggmlType: GetModelType(CBModels.Text),
-                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
-                cancellationToken: GlobalCT);
-        }
-        catch (Exception ex)
-        {
-            ShowErrMsg(this, ex.ToString());
-        }
-        finally
-        {
-            ctrlSet1.SetEnabled(true);
-            ctrlSet2.SetEnabled(false);
-
-            PBProgress.Style = ProgressBarStyle.Blocks;
-        }
-    }
-
     private async void BtnTranscribe_Click(object sender, EventArgs e)
     {
         Control[] ctrlSet1 =
@@ -221,12 +131,10 @@ public partial class FMain : Form
             CBLanguages,
             CBEnableTranslate,
             CBSamplingStrategies,
-            CBEnableSpeedUp2x,
             CBExportWebVTT,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
             BtnTranscribe,
-            BtnDetectLanguage,
             BtnReset
         };
 
@@ -264,8 +172,12 @@ public partial class FMain : Form
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
-                enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
+                enableSpeedUpAudio: false,
                 exportWebVtt: CBExportWebVTT.Checked,
+                enableConvertToWav: false,
+                modelImplementation: eModelImplementation.GPU,
+                gpuModelFlags: eGpuModelFlags.None,
+                adapter: null,
                 ggmlType: GetModelType(CBModels.Text),
                 samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
@@ -311,7 +223,6 @@ public partial class FMain : Form
             CBModels.Text = "Small";
             CBLanguages.Text = "zh";
             CBSamplingStrategies.Text = "Default";
-            CBEnableSpeedUp2x.Checked = false;
             CBEnableTranslate.Checked = false;
             CBExportWebVTT.Checked = false;
             CBEnableOpenCCS2TWP.Checked = false;

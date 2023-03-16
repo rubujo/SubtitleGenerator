@@ -7,11 +7,10 @@ using Xabe.FFmpeg.Events;
 using Xabe.FFmpeg;
 using SubtitleGenerator.Commons.Extensions;
 using System.Reflection;
-using SubtitleGenerator.Whisper.net.Ggml;
 using OpenCCNET;
-using Whisper.net.Wave;
 using SubtitleGenerator.Commons.Sets;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
+using Whisper;
 
 namespace SubtitleGenerator;
 
@@ -38,7 +37,6 @@ partial class FMain
         GlobalTT.SetToolTip(CBLanguages, "語言");
         GlobalTT.SetToolTip(CBModels, "模型");
         GlobalTT.SetToolTip(CBSamplingStrategies, "抽樣策略");
-        GlobalTT.SetToolTip(CBEnableSpeedUp2x, "可能可以加快轉錄的速度，但同時也有可能會造成轉錄的內容更不精確");
         GlobalTT.SetToolTip(CBEnableTranslate, "將轉錄的內容翻譯成英文");
         GlobalTT.SetToolTip(CBEnableOpenCCS2TWP, "使用 OpenCC 將轉錄的內容，從「簡體中文」轉換成「繁體中文（臺灣）」");
         GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉錄的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
@@ -286,134 +284,31 @@ partial class FMain
     }
 
     /// <summary>
-    /// 偵測語言
-    /// <para>因為會發生 System.AccessViolationException，故 speedUp 需設為 false。</para>
-    /// </summary>
-    /// <param name="inputFilePath">字串，檔案的路徑</param>
-    /// <param name="language">字串，語言（兩碼），預設值為 "auto"</param>
-    /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
-    /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
-    /// <param name="speedUp">布林值，是否加速，預設值為 false</param>
-    /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
-    /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
-    /// <param name="cancellationToken">CancellationToken</param>
-    /// <returns>Task</returns>
-    private async Task DetectLanguage(
-        string inputFilePath,
-        string language = "auto",
-        bool enableTranslate = false,
-        bool enableSpeedUp2x = false,
-        bool speedUp = false,
-        GgmlType ggmlType = GgmlType.Small,
-        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string tempFilePath = await Task.Run(async () =>
-            {
-                string wavfilePath = await ConvertToWavFile(inputFilePath, cancellationToken),
-                    modelFilePath = await CheckModelFile(ggmlType, cancellationToken);
-
-                if (string.IsNullOrEmpty(modelFilePath))
-                {
-                    WriteLog("發生錯誤：使用的模型檔案不存在或下載失敗。");
-                    WriteLog("已取消作業。");
-                    WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-
-                    return string.Empty;
-                }
-
-                WriteLog("正在開始作業……");
-                WriteLog($"使用的模型：{ggmlType}");
-
-                using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
-
-                WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
-                    .WithSegmentEventHandler(OnNewSegment);
-
-                if (language == "auto")
-                {
-                    whisperProcessorBuilder.WithLanguageDetection();
-                }
-                else
-                {
-                    // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/WhisperProcessorBuilder.cs#L302
-                    // 來源 2：https://github.com/ggerganov/whisper.cpp/blob/09e90680072d8ecdf02eaf21c393218385d2c616/whisper.cpp#L119
-                    whisperProcessorBuilder.WithLanguage(language);
-                }
-
-                if (enableTranslate)
-                {
-                    whisperProcessorBuilder.WithTranslate();
-                }
-
-                if (enableSpeedUp2x)
-                {
-                    whisperProcessorBuilder.WithSpeedUp2x();
-                }
-
-                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                    whisperProcessorBuilder,
-                    samplingStrategyType);
-                using FileStream fileStream = File.OpenRead(wavfilePath);
-
-                WaveParser waveParser = new(fileStream);
-
-                float[] avgSamples = await waveParser.GetAvgSamplesAsync(cancellationToken);
-
-                string? detectedLanguage = whisperProcessor.DetectLanguage(avgSamples, speedUp: speedUp),
-                    rawResult = string.IsNullOrEmpty(detectedLanguage) ?
-                        "識別失敗。" :
-                        detectedLanguage,
-                    resultMessage = $"偵測語言結果：{rawResult}";
-
-                WriteLog(resultMessage);
-
-                ShowMsg(this, resultMessage);
-
-                return wavfilePath;
-            }, cancellationToken);
-
-            if (!string.IsNullOrEmpty(tempFilePath) &&
-                File.Exists(tempFilePath))
-            {
-                File.Delete(tempFilePath);
-
-                WriteLog($"已刪除暫時檔案：{tempFilePath}");
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            WriteLog("已取消作業。");
-            WriteLog($"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-        }
-        catch (Exception ex)
-        {
-            ShowErrMsg(this, ex.ToString());
-        }
-    }
-
-    /// <summary>
     /// 轉錄
     /// </summary>
     /// <param name="inputFilePath">字串，檔案的路徑</param>
-    /// <param name="language">字串，語言（兩碼），預設值為 "auto"</param>
+    /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
     /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
-    /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
+    /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
     /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <param name="enableConvertToWav">布林值，啟用轉換成 WAV 檔案，預設值為 false</param>
+    /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
+    /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
+    /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
     private async Task Transcribe(
         string inputFilePath,
-        string language = "auto",
+        string language = "en",
         bool enableTranslate = false,
-        bool enableSpeedUp2x = false,
+        bool enableSpeedUpAudio = false,
         bool exportWebVtt = false,
+        bool enableConvertToWav = false,
+        eModelImplementation modelImplementation = eModelImplementation.GPU,
+        eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
+        string? adapter = null,
         GgmlType ggmlType = GgmlType.Small,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         CancellationToken cancellationToken = default)
@@ -426,7 +321,9 @@ partial class FMain
             {
                 List<SegmentData> segmentDataSet = new();
 
-                string wavfilePath = await ConvertToWavFile(inputFilePath, cancellationToken),
+                string wavfilePath = enableConvertToWav ?
+                    await ConvertToWavFile(inputFilePath, cancellationToken) :
+                    inputFilePath,
                     modelFilePath = await CheckModelFile(ggmlType, cancellationToken);
 
                 if (string.IsNullOrEmpty(modelFilePath))
@@ -445,52 +342,101 @@ partial class FMain
                 WriteLog($"使用 OpenCC：{(EnableOpenCC ? "是" : "否")}");
                 WriteLog($"OpenCC 模式：{GlobalOCCMode}");
 
-                using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
+                int tempPercent = 0;
 
-                WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
-                    .WithSegmentEventHandler(OnNewSegment);
+                bool isFinished = false;
 
-                if (language == "auto")
+                Action<double> pfnProgress = new((value) =>
                 {
-                    whisperProcessorBuilder.WithLanguageDetection();
-                }
-                else
+                    double actualPercent = Math.Round(value * 100, 2, MidpointRounding.AwayFromZero);
+
+                    // 減速機制。
+                    int parsePercent = Convert.ToInt32(actualPercent);
+
+                    if (parsePercent > tempPercent)
+                    {
+                        WriteLog($"{actualPercent}%");
+
+                        tempPercent = parsePercent;
+                    }
+
+                    if (actualPercent >= 100 && !isFinished)
+                    {
+                        isFinished = true;
+
+                        WriteLog("模型檔案載入完成。");
+                    }
+                });
+
+                WriteLog("正在開始載入模型檔案……");
+
+                using iModel model = await Library.loadModelAsync(
+                    path: modelFilePath,
+                    cancelToken: cancellationToken,
+                    flags: gpuModelFlags,
+                    adapter: adapter,
+                    pfnProgress: pfnProgress,
+                    impl: modelImplementation);
+                using Context context = model.createContext();
+
+                context.parameters.setFlag(eFullParamsFlags.PrintRealtime, false);
+                context.parameters.setFlag(eFullParamsFlags.PrintProgress, true);
+                context.parameters.setFlag(eFullParamsFlags.PrintTimestamps, true);
+                context.parameters.setFlag(eFullParamsFlags.PrintSpecial, false);
+                context.parameters.setFlag(eFullParamsFlags.Translate, enableTranslate);
+                // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內為實驗性質，在 GPU 模型沒有實作此功能，使用時會發生例外。
+                context.parameters.setFlag(eFullParamsFlags.SpeedupAudio, enableSpeedUpAudio);
+                // 反查時失敗時則使用 eLanguage.English。
+                context.parameters.language = Library.languageFromCode(language) ?? eLanguage.English;
+                context.parameters.cpuThreads = Environment.ProcessorCount;
+
+                switch (samplingStrategyType)
                 {
-                    // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/WhisperProcessorBuilder.cs#L302
-                    // 來源 2：https://github.com/ggerganov/whisper.cpp/blob/09e90680072d8ecdf02eaf21c393218385d2c616/whisper.cpp#L119
-                    whisperProcessorBuilder.WithLanguage(language);
+                    default:
+                    case SamplingStrategyType.Default:
+                        // 不進行任何處裡。
+                        break;
+                    case SamplingStrategyType.Greedy:
+                        context.parameters.strategy = eSamplingStrategy.Greedy;
+
+                        // TODO: 2023-03-16 待看未來是否要開放可以自己設定。
+                        //context.parameters.greedy = new Parameters.sGreedy()
+                        //{
+                        //    n_past = 0
+                        //};
+
+                        break;
+                    case SamplingStrategyType.BeamSearch:
+                        // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內尚未實作。
+                        context.parameters.strategy = eSamplingStrategy.BeamSearch;
+
+                        // TODO: 2023-03-16 待看未來是否要開放可以自己設定。
+                        //context.parameters.beamSearch = new Parameters.sBeamSearch() 
+                        //{ 
+                        //    beam_width = 0,
+                        //    n_best = 0,
+                        //    n_past = 0 
+                        //};
+
+                        break;
                 }
 
-                if (enableTranslate)
-                {
-                    whisperProcessorBuilder.WithTranslate();
-                }
+                using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
+                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(wavfilePath, true);
 
-                if (enableSpeedUp2x)
-                {
-                    whisperProcessorBuilder.WithSpeedUp2x();
-                }
+                cancellationToken.ThrowIfCancellationRequested();
 
-                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                    whisperProcessorBuilder,
-                    samplingStrategyType);
-                using FileStream fileStream = File.OpenRead(wavfilePath);
+                WriteLog("正在開始轉錄……");
 
-                WriteLog("轉錄的內容：");
-
-                await foreach (SegmentData segmentData in whisperProcessor
-                    .ProcessAsync(fileStream, cancellationToken))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    segmentDataSet.Add(segmentData);
-                }
+                context.runFull(audioBuffer);
 
                 WriteLog("轉錄完成。");
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // 建立字幕檔。
                 string subtitleFilePath = CreateSubtitleFile(
-                        segmentDataSet,
+                        context,
                         inputFilePath,
                         exportWebVtt),
                     subtitleFileName = Path.GetFileName(subtitleFilePath),
@@ -505,12 +451,16 @@ partial class FMain
                 return wavfilePath;
             }, cancellationToken);
 
-            if (!string.IsNullOrEmpty(tempFilePath) &&
-                File.Exists(tempFilePath))
+            // 當有啟用轉換成 WAV 檔案時才需要刪除暫時檔案。
+            if (enableConvertToWav)
             {
-                File.Delete(tempFilePath);
+                if (!string.IsNullOrEmpty(tempFilePath) &&
+                    File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
 
-                WriteLog($"已刪除暫時檔案：{tempFilePath}");
+                    WriteLog($"已刪除暫時檔案：{tempFilePath}");
+                }
             }
         }
         catch (OperationCanceledException)
@@ -525,72 +475,13 @@ partial class FMain
     }
 
     /// <summary>
-    /// 取得 WhisperProcessor
+    /// 建立字幕檔
     /// </summary>
-    /// <param name="whisperProcessorBuilder">WhisperProcessorBuilder</param>
-    /// <param name="strategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
-    /// <returns>WhisperProcessor</returns>
-    private static WhisperProcessor GetWhisperProcessor(
-        WhisperProcessorBuilder whisperProcessorBuilder,
-        SamplingStrategyType strategyType = SamplingStrategyType.Default)
-    {
-        WhisperProcessor whisperProcessor;
-
-        switch (strategyType)
-        {
-            case SamplingStrategyType.Default:
-                whisperProcessor = whisperProcessorBuilder.Build();
-
-                break;
-            case SamplingStrategyType.Greedy:
-                BeamSearchSamplingStrategyBuilder beamSearchSamplingStrategyBuilder =
-                    (BeamSearchSamplingStrategyBuilder)whisperProcessorBuilder
-                        .WithBeamSearchSamplingStrategy();
-
-                // TODO: 2023-03-14 待看未來是否要開放可以自己設定。
-
-                // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/BeamSearchSamplingStrategyBuilder.cs#L31
-                // 來源 2：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/BeamSearchSamplingStrategyBuilder.cs#L46
-                //beamSearchSamplingStrategyBuilder
-                //    .WithBeamSize(5)
-                //    .WithPatience(-0.1f);
-
-                whisperProcessor = beamSearchSamplingStrategyBuilder
-                    .ParentBuilder.Build();
-
-                break;
-            case SamplingStrategyType.BeamSearch:
-                GreedySamplingStrategyBuilder greedySamplingStrategyBuilder =
-                    (GreedySamplingStrategyBuilder)whisperProcessorBuilder
-                        .WithGreedySamplingStrategy();
-
-                // TODO: 2023-03-14 待看未來是否要開放可以自己設定。
-
-                // 來源：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/GreedySamplingStrategyBuilder.cs#L31
-                //greedySamplingStrategyBuilder.WithBestOf(1);
-
-                whisperProcessor = greedySamplingStrategyBuilder
-                    .ParentBuilder.Build();
-
-                break;
-            default:
-                whisperProcessor = whisperProcessorBuilder.Build();
-
-                break;
-        }
-
-        return whisperProcessor;
-    }
-
-    /// <summary>
-    /// 建立字幕檔案
-    /// </summary>
-    /// <param name="segmentDataSet">List&lt;SegmentData&gt;</param>
+    /// <param name="context">Context</param>
     /// <param name="inputFilePath">字串，檔案的路徑</param>
     /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <returns>字串，字幕檔案的路徑</returns>
-    private string CreateSubtitleFile(
-        List<SegmentData> segmentDataSet,
+    private string CreateSubtitleFile(Context context,
         string inputFilePath,
         bool exportWebVTT)
     {
@@ -602,27 +493,29 @@ partial class FMain
 
         using StreamWriter streamWriter = File.CreateText(filePath);
 
+        ReadOnlySpan<sSegment> segments = context.results(eResultFlags.Timestamps).segments;
+
         if (exportWebVTT)
         {
             streamWriter.WriteLine("WEBVTT ");
             streamWriter.WriteLine();
         }
 
-        for (int i = 0; i < segmentDataSet.Count; i++)
+        for (int i = 0; i < segments.Length; i++)
         {
             streamWriter.WriteLine(i + 1);
 
-            SegmentData segmentData = segmentDataSet[i];
+            sSegment segment = segments[i];
 
             string startTime = exportWebVTT ?
-                    PrintTime(segmentData.Start) :
-                    PrintTimeWithComma(segmentData.Start),
+                    PrintTime(segment.time.begin) :
+                    PrintTimeWithComma(segment.time.begin),
                 endTime = exportWebVTT ?
-                    PrintTime(segmentData.End) :
-                    PrintTimeWithComma(segmentData.End);
+                    PrintTime(segment.time.end) :
+                    PrintTimeWithComma(segment.time.end);
 
             streamWriter.WriteLine("{0} --> {1}", startTime, endTime);
-            streamWriter.WriteLine(GetSegmentDataText(segmentData));
+            streamWriter.WriteLine(GetSegmentText(segment));
             streamWriter.WriteLine();
         }
 
@@ -632,21 +525,26 @@ partial class FMain
     }
 
     /// <summary>
-    /// 取得 SegmentData 的文字
+    /// 取得 sSegment 的文字
     /// </summary>
-    /// <param name="segmentData">SegmentData</param>
+    /// <param name="segment">sSegment</param>
     /// <returns>字串，文字內容</returns>
-    private string GetSegmentDataText(SegmentData segmentData)
+    private string GetSegmentText(sSegment segment)
     {
+        if (string.IsNullOrEmpty(segment.text))
+        {
+            return string.Empty;
+        }
+
         return EnableOpenCC ?
             GlobalOCCMode switch
             {
-                OpenCCMode.None => segmentData.Text,
-                OpenCCMode.S2TWP => ZhConverter.HansToTW(segmentData.Text, true),
-                OpenCCMode.TW2SP => ZhConverter.TWToHans(segmentData.Text, true),
-                _ => segmentData.Text
+                OpenCCMode.None => segment.text,
+                OpenCCMode.S2TWP => ZhConverter.HansToTW(segment.text, true),
+                OpenCCMode.TW2SP => ZhConverter.TWToHans(segment.text, true),
+                _ => segment.text
             } :
-            segmentData.Text;
+            segment.text;
     }
 
     /// <summary>
