@@ -188,6 +188,7 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
+            // 轉錄。
             await Transcribe(
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,

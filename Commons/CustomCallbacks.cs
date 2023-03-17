@@ -1,4 +1,5 @@
 ﻿using Whisper;
+using Whisper.Internal;
 
 namespace SubtitleGenerator.Commons;
 
@@ -30,35 +31,42 @@ internal class CustomCallbacks : Callbacks
 
     protected override void onNewSegment(Context sender, int countNew)
     {
-        _cancellationToken.ThrowIfCancellationRequested();
-
-        TranscribeResult transcribeResult = sender.results(eResultFlags.Timestamps);
-
-        int s0 = transcribeResult.segments.Length - countNew;
-
-        if (s0 == 0)
+        try
         {
-            _FMain.WriteLog("轉錄的內容：");
-        }
+            _cancellationToken.ThrowIfCancellationRequested();
 
-        for (int i = s0; i < transcribeResult.segments.Length; i++)
-        {
-            sSegment segenmt = transcribeResult.segments[i];
+            TranscribeResult transcribeResult = sender.results(eResultFlags.Timestamps);
 
-            string speaker = sender.detectSpeaker(segenmt.time) switch
+            int s0 = transcribeResult.segments.Length - countNew;
+
+            if (s0 == 0)
             {
-                eSpeakerChannel.Unsure => "（無法辨別聲道）",
-                eSpeakerChannel.Left => "（左聲道）",
-                eSpeakerChannel.Right => "（右聲道）",
-                eSpeakerChannel.NoStereoData => "（單聲道）",
-                _ => ""
-            };
+                _FMain.WriteLog("轉錄的內容：");
+            }
 
-            string text = $"[{FMain.PrintTime(segenmt.time.begin)} --> " +
-                $"{FMain.PrintTime(segenmt.time.end)}]｜" +
-                $"{speaker}：{segenmt.text}";
+            for (int i = s0; i < transcribeResult.segments.Length; i++)
+            {
+                sSegment segenmt = transcribeResult.segments[i];
 
-            _FMain.WriteLog(text);
+                string speaker = sender.detectSpeaker(segenmt.time) switch
+                {
+                    eSpeakerChannel.Unsure => "（無法辨別聲道）",
+                    eSpeakerChannel.Left => "（左聲道）",
+                    eSpeakerChannel.Right => "（右聲道）",
+                    eSpeakerChannel.NoStereoData => "（單聲道）",
+                    _ => ""
+                };
+
+                string text = $"[{FMain.PrintTime(segenmt.time.begin)} --> " +
+                    $"{FMain.PrintTime(segenmt.time.end)}]｜" +
+                    $"{speaker}：{segenmt.text}";
+
+                _FMain.WriteLog(text);
+            }
+        }
+        catch (Exception ex)
+        {
+            NativeLogger.throwForHR(ex.HResult);
         }
     }
 }

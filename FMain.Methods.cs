@@ -1,16 +1,16 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-using Whisper.net.Ggml;
-using Xabe.FFmpeg.Downloader;
-using Xabe.FFmpeg.Events;
-using Xabe.FFmpeg;
+﻿using OpenCCNET;
+using SubtitleGenerator.Commons;
 using SubtitleGenerator.Commons.Extensions;
-using System.Reflection;
-using OpenCCNET;
 using SubtitleGenerator.Commons.Sets;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
 using Whisper;
-using SubtitleGenerator.Commons;
+using Whisper.net.Ggml;
+using Xabe.FFmpeg;
+using Xabe.FFmpeg.Downloader;
+using Xabe.FFmpeg.Events;
 
 namespace SubtitleGenerator;
 
@@ -329,11 +329,15 @@ partial class FMain
     {
         try
         {
+            Stopwatch stopWatch = new();
+
+            stopWatch.Start();
+
             cancellationToken.ThrowIfCancellationRequested();
 
             string tempFilePath = await Task.Run(async () =>
             {
-                string wavfilePath = enableConvertToWav ?
+                string filePath = enableConvertToWav ?
                     await ConvertToWavFile(inputFilePath, cancellationToken) :
                     inputFilePath,
                     modelFilePath = await CheckModelFile(ggmlType, cancellationToken),
@@ -374,7 +378,7 @@ partial class FMain
 
                     if (parsePercent > tempPercent)
                     {
-                        WriteLog($"載入進度：{actualPercent}%");
+                        WriteLog($"模型檔案載入進度：{actualPercent}%");
 
                         tempPercent = parsePercent;
                     }
@@ -386,6 +390,15 @@ partial class FMain
                         WriteLog($"模型檔案 {modelFileName} 載入完成。");
                     }
                 });
+
+                pfnLogMessage pfnLogMessage = new((eLogLevel level, string message) =>
+                {
+                    WriteLog($"[{level}] {message}");
+                });
+
+                const eLoggerFlags loggerFlags = eLoggerFlags.UseStandardError | eLoggerFlags.SkipFormatMessage;
+
+                Library.setLogSink(eLogLevel.Debug, loggerFlags, pfnLogMessage);
 
                 WriteLog($"正在開始載入模型檔案 {modelFileName} ……");
 
@@ -441,7 +454,7 @@ partial class FMain
                 }
 
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
-                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(wavfilePath, true);
+                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(path: filePath, stereo: true);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -464,12 +477,16 @@ partial class FMain
                     subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
                         .Replace(subtitleFileName, string.Empty);
 
+                stopWatch.Stop();
+
+                WriteLog($"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+
                 ShowMsg(this, "轉錄作業完成。");
 
                 // 開啟字幕檔所位於的資料夾。
                 OpenFolder(subtitleFileFolder);
 
-                return wavfilePath;
+                return filePath;
             }, cancellationToken);
 
             // 當有啟用轉換成 WAV 檔案時才需要刪除暫時檔案。
