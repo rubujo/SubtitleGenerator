@@ -541,6 +541,233 @@ partial class FMain
     }
 
     /// <summary>
+    /// 轉譯
+    /// </summary>
+    /// <param name="captureDeviceId">CaptureDeviceId</param>
+    /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
+    /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
+    /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
+    /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
+    /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
+    /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
+    /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
+    /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>Task</returns>
+    private async Task Transcribe(
+        CaptureDeviceId captureDeviceId,
+        string language = "en",
+        bool enableTranslate = false,
+        bool enableSpeedUpAudio = false,
+        bool exportWebVtt = false,
+        bool isStereo = true,
+        eModelImplementation modelImplementation = eModelImplementation.GPU,
+        eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
+        string? adapter = null,
+        GgmlType ggmlType = GgmlType.Small,
+        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Stopwatch stopWatch = new();
+
+            stopWatch.Start();
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await Task.Run(async () =>
+            {
+                string modelFilePath = await CheckModelFile(ggmlType, cancellationToken),
+                    modelFileName = Path.GetFileName(modelFilePath);
+
+                if (string.IsNullOrEmpty(modelFilePath))
+                {
+                    WriteLog($"發生錯誤：使用的模型檔案 {modelFileName} 不存在或下載失敗。");
+                    WriteLog("已取消轉譯作業。");
+                }
+
+                WriteLog($"使用的模型實作：{modelImplementation}");
+                WriteLog($"使用的 GPU 裝置：{adapter ?? "預設"}");
+                WriteLog($"使用的 GPU 模型旗標：{gpuModelFlags}");
+                WriteLog($"使用的模型：{ggmlType}");
+                WriteLog($"使用的語言：{language}");
+                WriteLog($"使用的抽樣策略：{samplingStrategyType}");
+                WriteLog($"使用 OpenCC：{(EnableOpenCC ? "是" : "否")}");
+                WriteLog($"OpenCC 模式：{GlobalOCCMode}");
+
+                int tempPercent = 0;
+
+                bool isFinished = false;
+
+                Action<double> pfnProgress = new((value) =>
+                {
+                    double actualPercent = Math.Round(value * 100, 1, MidpointRounding.AwayFromZero);
+
+                    // 減速機制。
+                    int parsePercent = Convert.ToInt32(actualPercent);
+
+                    if (parsePercent > tempPercent)
+                    {
+                        WriteLog($"模型檔案載入進度：{actualPercent}%");
+
+                        tempPercent = parsePercent;
+                    }
+
+                    if (actualPercent >= 100 && !isFinished)
+                    {
+                        isFinished = true;
+
+                        WriteLog($"模型檔案 {modelFileName} 載入完成。");
+                    }
+                });
+
+                pfnLogMessage pfnLogMessage = new((eLogLevel level, string message) =>
+                {
+                    WriteLog($"[{level}] {message}");
+                });
+
+                const eLoggerFlags loggerFlags = eLoggerFlags.UseStandardError | eLoggerFlags.SkipFormatMessage;
+
+                Library.setLogSink(eLogLevel.Debug, loggerFlags, pfnLogMessage);
+
+                WriteLog($"正在開始載入模型檔案 {modelFileName} ……");
+
+                using iModel model = await Library.loadModelAsync(
+                    path: modelFilePath,
+                    cancelToken: cancellationToken,
+                    flags: gpuModelFlags,
+                    adapter: adapter,
+                    pfnProgress: pfnProgress,
+                    impl: modelImplementation);
+                using Context context = model.createContext();
+
+                context.timingsPrint();
+
+                context.parameters.setFlag(eFullParamsFlags.PrintRealtime, false);
+                context.parameters.setFlag(eFullParamsFlags.PrintProgress, true);
+                context.parameters.setFlag(eFullParamsFlags.PrintTimestamps, true);
+                context.parameters.setFlag(eFullParamsFlags.PrintSpecial, false);
+                context.parameters.setFlag(eFullParamsFlags.Translate, enableTranslate);
+                // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內為實驗性質，在 GPU 模型沒有實作此功能，使用時會發生例外。
+                context.parameters.setFlag(eFullParamsFlags.SpeedupAudio, enableSpeedUpAudio);
+                // 反查時失敗時則使用 eLanguage.English。
+                context.parameters.language = Library.languageFromCode(language) ?? eLanguage.English;
+                context.parameters.cpuThreads = Environment.ProcessorCount;
+
+                switch (samplingStrategyType)
+                {
+                    default:
+                    case SamplingStrategyType.Default:
+                        // 不進行任何處裡。
+                        break;
+                    case SamplingStrategyType.Greedy:
+                        context.parameters.strategy = eSamplingStrategy.Greedy;
+
+                        // TODO: 2023-03-16 待看未來是否要開放可以自己設定。
+                        //context.parameters.greedy = new Parameters.sGreedy()
+                        //{
+                        //    n_past = 0
+                        //};
+
+                        break;
+                    case SamplingStrategyType.BeamSearch:
+                        // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內尚未實作此抽樣策略。。
+                        context.parameters.strategy = eSamplingStrategy.BeamSearch;
+
+                        // TODO: 2023-03-16 待看未來是否要開放可以自己設定。
+                        //context.parameters.beamSearch = new Parameters.sBeamSearch() 
+                        //{ 
+                        //    beam_width = 0,
+                        //    n_best = 0,
+                        //    n_past = 0 
+                        //};
+
+                        break;
+                }
+
+                sCaptureParams captureParams = new sCaptureParams();
+
+                if (isStereo)
+                {
+                    captureParams.flags = eCaptureFlags.Stereo;
+                }
+
+                using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
+
+                // TODO: 2023-03-17 待完成相關功能。
+                CaptureDeviceId[]? captureDevices = mediaFoundation.listCaptureDevices();
+
+                if (captureDevices == null || captureDevices.Length <= 0)
+                {
+                    WriteLog("發生錯誤：找不到錄音裝置。");
+                    WriteLog("已取消轉譯作業。");
+
+                    return;
+                }
+
+                captureDeviceId = captureDevices[0];
+
+                using iAudioCapture audioCapture = mediaFoundation
+                    .openCaptureDevice(captureDeviceId, captureParams);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                CustomCallbacks customCallbacks = new(
+                    fMain: this,
+                    cancellationToken: cancellationToken);
+
+                CustomCaptureCallbacks customCaptureCallbacks = new(
+                    fMain: this,
+                    cancellationToken: cancellationToken);
+
+                context.runCapture(
+                    capture: audioCapture,
+                    callbacks: customCallbacks,
+                    captureCallbacks: customCaptureCallbacks);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 建立字幕檔。
+                string subtitleFilePath = CreateSubtitleFile(
+                        context,
+                        Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
+                        exportWebVtt),
+                    subtitleFileName = Path.GetFileName(subtitleFilePath),
+                    subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
+                        .Replace(subtitleFileName, string.Empty);
+
+                stopWatch.Stop();
+
+                WriteLog($"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+
+                ShowMsg(this, "轉譯作業完成。");
+
+                // 開啟字幕檔所位於的資料夾。
+                OpenFolder(subtitleFileFolder);
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            WriteLog("已取消轉譯作業。");
+        }
+        catch (ApplicationException ae)
+        {
+            WriteLog("已取消轉譯作業。");
+
+            ShowErrMsg(this, ae.Message);
+        }
+        catch (Exception ex)
+        {
+            WriteLog("已取消轉譯作業。");
+
+            ShowErrMsg(this, ex.ToString());
+        }
+    }
+
+    /// <summary>
     /// 建立字幕檔
     /// </summary>
     /// <param name="context">Context</param>
