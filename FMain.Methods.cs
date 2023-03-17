@@ -7,7 +7,6 @@ using Xabe.FFmpeg.Events;
 using Xabe.FFmpeg;
 using SubtitleGenerator.Commons.Extensions;
 using System.Reflection;
-using SubtitleGenerator.Whisper.net.Ggml;
 using OpenCCNET;
 using Whisper.net.Wave;
 using SubtitleGenerator.Commons.Sets;

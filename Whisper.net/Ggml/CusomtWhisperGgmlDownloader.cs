@@ -1,6 +1,6 @@
 ﻿using Whisper.net.Ggml;
 
-namespace SubtitleGenerator.Whisper.net.Ggml;
+namespace Whisper.net.Ggml;
 
 /// <summary>
 /// 自定義 WhisperGgmlDownloader
