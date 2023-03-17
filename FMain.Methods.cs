@@ -40,10 +40,10 @@ partial class FMain
         GlobalTT.SetToolTip(CBModels, "模型");
         GlobalTT.SetToolTip(CBSamplingStrategies, "抽樣策略");
         GlobalTT.SetToolTip(CBLanguages, "語言");
-        GlobalTT.SetToolTip(CBEnableTranslate, "將轉錄的內容翻譯成英文");
-        GlobalTT.SetToolTip(CBConvertToWav, "先透過 FFmpeg 將選擇的檔案轉換成 WAV 格式的暫時檔案後，在進行轉錄");
-        GlobalTT.SetToolTip(CBEnableOpenCCS2TWP, "使用 OpenCC 將轉錄的內容，從「簡體中文」轉換成「繁體中文（臺灣）」");
-        GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉錄的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
+        GlobalTT.SetToolTip(CBEnableTranslate, "將轉譯的內容翻譯成英文");
+        GlobalTT.SetToolTip(CBConvertToWav, "先透過 FFmpeg 將選擇的檔案轉換成 WAV 格式的暫時檔案後，在進行轉譯");
+        GlobalTT.SetToolTip(CBEnableOpenCCS2TWP, "使用 OpenCC 將轉譯的內容，從「簡體中文」轉換成「繁體中文（臺灣）」");
+        GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉譯的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
 
         // 設定控制項。
         CBModels.Text = "Small";
@@ -298,7 +298,7 @@ partial class FMain
     }
 
     /// <summary>
-    /// 轉錄
+    /// 轉譯
     /// </summary>
     /// <param name="inputFilePath">字串，檔案的路徑</param>
     /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
@@ -306,6 +306,7 @@ partial class FMain
     /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
     /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="enableConvertToWav">布林值，啟用轉換成 WAV 檔案，預設值為 false</param>
+    /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
     /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
@@ -320,6 +321,7 @@ partial class FMain
         bool enableSpeedUpAudio = false,
         bool exportWebVtt = false,
         bool enableConvertToWav = false,
+        bool isStereo = true,
         eModelImplementation modelImplementation = eModelImplementation.GPU,
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
         string? adapter = null,
@@ -346,7 +348,7 @@ partial class FMain
                 if (string.IsNullOrEmpty(modelFilePath))
                 {
                     WriteLog($"發生錯誤：使用的模型檔案 {modelFileName} 不存在或下載失敗。");
-                    WriteLog("已取消轉錄作業。");
+                    WriteLog("已取消轉譯作業。");
 
                     if (enableConvertToWav)
                     {
@@ -411,6 +413,8 @@ partial class FMain
                     impl: modelImplementation);
                 using Context context = model.createContext();
 
+                context.timingsPrint();
+
                 context.parameters.setFlag(eFullParamsFlags.PrintRealtime, false);
                 context.parameters.setFlag(eFullParamsFlags.PrintProgress, true);
                 context.parameters.setFlag(eFullParamsFlags.PrintTimestamps, true);
@@ -454,17 +458,19 @@ partial class FMain
                 }
 
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
-                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(path: filePath, stereo: true);
+                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(
+                    path: filePath,
+                    stereo: isStereo);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                WriteLog("正在開始轉錄作業……");
+                WriteLog("正在開始轉譯作業……");
 
                 CustomCallbacks customCallbacks = new(this, cancellationToken);
 
                 context.runFull(buffer: audioBuffer, callbacks: customCallbacks);
 
-                WriteLog("轉錄作業完成。");
+                WriteLog("轉譯作業完成。");
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -481,7 +487,7 @@ partial class FMain
 
                 WriteLog($"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
-                ShowMsg(this, "轉錄作業完成。");
+                ShowMsg(this, "轉譯作業完成。");
 
                 // 開啟字幕檔所位於的資料夾。
                 OpenFolder(subtitleFileFolder);
@@ -503,7 +509,7 @@ partial class FMain
         }
         catch (OperationCanceledException)
         {
-            WriteLog("已取消轉錄作業。");
+            WriteLog("已取消轉譯作業。");
 
             if (enableConvertToWav)
             {
@@ -512,7 +518,7 @@ partial class FMain
         }
         catch (ApplicationException ae)
         {
-            WriteLog("已取消轉錄作業。");
+            WriteLog("已取消轉譯作業。");
 
             if (enableConvertToWav)
             {
@@ -523,7 +529,7 @@ partial class FMain
         }
         catch (Exception ex)
         {
-            WriteLog("已取消轉錄作業。");
+            WriteLog("已取消轉譯作業。");
 
             if (enableConvertToWav)
             {

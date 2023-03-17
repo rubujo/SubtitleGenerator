@@ -41,7 +41,7 @@ internal class CustomCallbacks : Callbacks
 
             if (s0 == 0)
             {
-                _FMain.WriteLog("轉錄的內容：");
+                _FMain.WriteLog("轉譯的內容：");
             }
 
             for (int i = s0; i < transcribeResult.segments.Length; i++)
@@ -50,7 +50,7 @@ internal class CustomCallbacks : Callbacks
 
                 string speaker = sender.detectSpeaker(segenmt.time) switch
                 {
-                    eSpeakerChannel.Unsure => "（無法辨別聲道）",
+                    eSpeakerChannel.Unsure => "（未知聲道）",
                     eSpeakerChannel.Left => "（左聲道）",
                     eSpeakerChannel.Right => "（右聲道）",
                     eSpeakerChannel.NoStereoData => "（單聲道）",

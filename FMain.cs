@@ -168,7 +168,7 @@ public partial class FMain : Form
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
                 MessageBox.Show(
-                    "請先選擇要轉錄的視訊或音訊檔案。",
+                    "請先選擇要轉譯的視訊或音訊檔案。",
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -188,7 +188,7 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
-            // 轉錄。
+            // 轉譯。
             await Transcribe(
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
@@ -196,6 +196,7 @@ public partial class FMain : Form
                 enableSpeedUpAudio: CBEnableSpeedUpAudio.Checked,
                 exportWebVtt: CBExportWebVTT.Checked,
                 enableConvertToWav: CBConvertToWav.Checked,
+                isStereo: true,
                 modelImplementation: GetModelImplementation(CBModelImplementation.Text),
                 gpuModelFlags: GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
