@@ -689,7 +689,7 @@ partial class FMain
                         break;
                 }
 
-                sCaptureParams captureParams = new sCaptureParams();
+                sCaptureParams captureParams = new();
 
                 if (isStereo)
                 {
