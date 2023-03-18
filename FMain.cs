@@ -194,7 +194,7 @@ public partial class FMain : Form
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
                 enableSpeedUpAudio: CBEnableSpeedUpAudio.Checked,
-                exportWebVtt: CBExportWebVTT.Checked,
+                exportWebVTT: CBExportWebVTT.Checked,
                 enableConvertToWav: CBConvertToWav.Checked,
                 isStereo: true,
                 modelImplementation: GetModelImplementation(CBModelImplementation.Text),

@@ -304,7 +304,7 @@ partial class FMain
     /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
     /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
     /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
-    /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="enableConvertToWav">布林值，啟用轉換成 WAV 檔案，預設值為 false</param>
     /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
     /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
@@ -319,7 +319,7 @@ partial class FMain
         string language = "en",
         bool enableTranslate = false,
         bool enableSpeedUpAudio = false,
-        bool exportWebVtt = false,
+        bool exportWebVTT = false,
         bool enableConvertToWav = false,
         bool isStereo = true,
         eModelImplementation modelImplementation = eModelImplementation.GPU,
@@ -478,7 +478,7 @@ partial class FMain
                 string subtitleFilePath = CreateSubtitleFile(
                         context,
                         inputFilePath,
-                        exportWebVtt),
+                        exportWebVTT),
                     subtitleFileName = Path.GetFileName(subtitleFilePath),
                     subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
                         .Replace(subtitleFileName, string.Empty);
@@ -547,7 +547,7 @@ partial class FMain
     /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
     /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
     /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
-    /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
     /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
@@ -561,7 +561,7 @@ partial class FMain
         string language = "en",
         bool enableTranslate = false,
         bool enableSpeedUpAudio = false,
-        bool exportWebVtt = false,
+        bool exportWebVTT = false,
         bool isStereo = true,
         eModelImplementation modelImplementation = eModelImplementation.GPU,
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
@@ -570,16 +570,16 @@ partial class FMain
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         CancellationToken cancellationToken = default)
     {
+        Context? context = null;
+
         try
         {
-            Stopwatch stopWatch = new();
-
-            stopWatch.Start();
-
             cancellationToken.ThrowIfCancellationRequested();
 
             await Task.Run(async () =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 string modelFilePath = await CheckModelFile(ggmlType, cancellationToken),
                     modelFileName = Path.GetFileName(modelFilePath);
 
@@ -642,7 +642,8 @@ partial class FMain
                     adapter: adapter,
                     pfnProgress: pfnProgress,
                     impl: modelImplementation);
-                using Context context = model.createContext();
+
+                context = model.createContext();
 
                 context.timingsPrint();
 
@@ -696,20 +697,6 @@ partial class FMain
                 }
 
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
-
-                // TODO: 2023-03-17 待完成相關功能。
-                CaptureDeviceId[]? captureDevices = mediaFoundation.listCaptureDevices();
-
-                if (captureDevices == null || captureDevices.Length <= 0)
-                {
-                    WriteLog("發生錯誤：找不到錄音裝置。");
-                    WriteLog("已取消轉譯作業。");
-
-                    return;
-                }
-
-                captureDeviceId = captureDevices[0];
-
                 using iAudioCapture audioCapture = mediaFoundation
                     .openCaptureDevice(captureDeviceId, captureParams);
 
@@ -727,31 +714,31 @@ partial class FMain
                     capture: audioCapture,
                     callbacks: customCallbacks,
                     captureCallbacks: customCaptureCallbacks);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // 建立字幕檔。
-                string subtitleFilePath = CreateSubtitleFile(
-                        context,
-                        Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
-                        exportWebVtt),
-                    subtitleFileName = Path.GetFileName(subtitleFilePath),
-                    subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
-                        .Replace(subtitleFileName, string.Empty);
-
-                stopWatch.Stop();
-
-                WriteLog($"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
-
-                ShowMsg(this, "轉譯作業完成。");
-
-                // 開啟字幕檔所位於的資料夾。
-                OpenFolder(subtitleFileFolder);
             }, cancellationToken);
         }
         catch (OperationCanceledException)
         {
             WriteLog("已取消轉譯作業。");
+
+            if (context == null)
+            {
+                WriteLog("[Debug] context is null.");
+            }
+
+            if (context != null)
+            {
+                // 建立字幕檔。
+                string subtitleFilePath = CreateSubtitleFile(
+                        context,
+                        Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
+                        exportWebVTT),
+                    subtitleFileName = Path.GetFileName(subtitleFilePath),
+                    subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
+                        .Replace(subtitleFileName, string.Empty);
+
+                // 開啟字幕檔所位於的資料夾。
+                OpenFolder(subtitleFileFolder);
+            }
         }
         catch (ApplicationException ae)
         {
@@ -774,7 +761,7 @@ partial class FMain
     /// <param name="inputFilePath">字串，檔案的路徑</param>
     /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <returns>字串，字幕檔案的路徑</returns>
-    private string CreateSubtitleFile(Context context,
+    public string CreateSubtitleFile(Context context,
         string inputFilePath,
         bool exportWebVTT)
     {
@@ -1041,7 +1028,7 @@ partial class FMain
     /// 開啟資料夾
     /// </summary>
     /// <param name="path">字串，路徑</param>
-    private void OpenFolder(string path)
+    public void OpenFolder(string path)
     {
         if (string.IsNullOrEmpty(path))
         {

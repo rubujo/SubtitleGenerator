@@ -1,5 +1,5 @@
-﻿using System.Runtime.ExceptionServices;
-using Whisper;
+﻿using Whisper;
+using Whisper.Internal;
 
 namespace SubtitleGenerator.Commons;
 
@@ -48,7 +48,7 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
         }
         catch (Exception ex)
         {
-            ExceptionDispatchInfo.Capture(ex).Throw();
+            NativeLogger.throwForHR(ex.HResult);
         }
     }
 }

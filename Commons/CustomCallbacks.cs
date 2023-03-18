@@ -41,7 +41,7 @@ internal class CustomCallbacks : Callbacks
 
             if (s0 == 0)
             {
-                _FMain.WriteLog("轉譯的內容：");
+                _FMain.WriteLog(string.Empty);
             }
 
             for (int i = s0; i < transcribeResult.segments.Length; i++)
