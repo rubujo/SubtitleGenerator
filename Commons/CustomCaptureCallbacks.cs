@@ -18,7 +18,10 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
     /// </summary>
     private readonly CancellationToken? _cancellationToken;
 
-    private bool ShouldQuit = false;
+    /// <summary>
+    /// 應該取消
+    /// </summary>
+    private bool ShouldCancel = false;
 
     /// <summary>
     /// 自定義 Callbacks
@@ -31,7 +34,7 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
         _cancellationToken = cancellationToken;
     }
 
-    protected override bool shouldCancel(Context sender) => ShouldQuit;
+    protected override bool shouldCancel(Context sender) => ShouldCancel;
 
     protected override void captureStatusChanged(Context sender, eCaptureStatus status)
     {
@@ -39,12 +42,12 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
         {
             if (_cancellationToken?.IsCancellationRequested == true)
             {
-                ShouldQuit = true;
+                ShouldCancel = true;
             }
 
             _cancellationToken?.ThrowIfCancellationRequested();
 
-            _FMain.WriteLog($"捕捉狀態：{status}");
+            FMain.WriteLog(_FMain, $"捕捉狀態：{status}");
         }
         catch (Exception ex)
         {

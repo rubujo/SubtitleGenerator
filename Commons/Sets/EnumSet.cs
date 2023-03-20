@@ -3,7 +3,7 @@
 /// <summary>
 /// 列舉組
 /// </summary>
-internal class EnumSet
+public class EnumSet
 {
     /// <summary>
     /// 抽樣策略類型

@@ -28,10 +28,10 @@ partial class FMain
     /// <summary>
     /// 是否啟用 OpenCC
     /// </summary>
-    private bool EnableOpenCC = false;
+    public bool EnableOpenCC = false;
 
     /// <summary>
     /// OpenCC 的模式
     /// </summary>
-    private OpenCCMode GlobalOCCMode = OpenCCMode.None;
+    public OpenCCMode GlobalOCCMode = OpenCCMode.None;
 }

@@ -1,4 +1,5 @@
-﻿using Whisper;
+﻿using SubtitleGenerator.Commons.Utils;
+using Whisper;
 using Whisper.Internal;
 
 namespace SubtitleGenerator.Commons;
@@ -41,7 +42,7 @@ internal class CustomCallbacks : Callbacks
 
             if (s0 == 0)
             {
-                _FMain.WriteLog(string.Empty);
+                FMain.WriteLog(_FMain, string.Empty);
             }
 
             for (int i = s0; i < transcribeResult.segments.Length; i++)
@@ -57,11 +58,11 @@ internal class CustomCallbacks : Callbacks
                     _ => ""
                 };
 
-                string text = $"[{FMain.PrintTime(segenmt.time.begin)} --> " +
-                    $"{FMain.PrintTime(segenmt.time.end)}]｜" +
+                string text = $"[{WhisperUtil.PrintTime(segenmt.time.begin)} --> " +
+                    $"{WhisperUtil.PrintTime(segenmt.time.end)}]｜" +
                     $"{speaker}：{segenmt.text}";
 
-                _FMain.WriteLog(text);
+                FMain.WriteLog(_FMain, text);
             }
         }
         catch (Exception ex)

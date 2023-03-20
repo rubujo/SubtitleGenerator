@@ -1,4 +1,5 @@
 using SubtitleGenerator.Commons.Extensions;
+using SubtitleGenerator.Commons.Utils;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
 
 namespace SubtitleGenerator;
@@ -167,11 +168,7 @@ public partial class FMain : Form
         {
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
-                MessageBox.Show(
-                    "請先選擇要轉譯的視訊或音訊檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                ShowWarnMsg(this, "請先選擇要轉譯的視訊或音訊檔案。");
 
                 return;
             }
@@ -189,7 +186,8 @@ public partial class FMain : Form
             SetOpenCCVariables();
 
             // 轉譯。
-            await Transcribe(
+            await WhisperUtil.Transcribe(
+                form: this,
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
@@ -197,11 +195,11 @@ public partial class FMain : Form
                 exportWebVTT: CBExportWebVTT.Checked,
                 enableConvertToWav: CBConvertToWav.Checked,
                 isStereo: true,
-                modelImplementation: GetModelImplementation(CBModelImplementation.Text),
-                gpuModelFlags: GetGpuModelFlag(CBGpuModelFlags.Text),
+                modelImplementation: WhisperUtil.GetModelImplementation(CBModelImplementation.Text),
+                gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
-                ggmlType: GetModelType(CBModels.Text),
-                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
+                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)

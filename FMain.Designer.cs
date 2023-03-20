@@ -203,7 +203,7 @@
             CBGPUs.FormattingEnabled = true;
             CBGPUs.Location = new Point(139, 41);
             CBGPUs.Name = "CBGPUs";
-            CBGPUs.Size = new Size(358, 23);
+            CBGPUs.Size = new Size(395, 23);
             CBGPUs.TabIndex = 2;
             // 
             // CBConvertToWav
@@ -220,10 +220,10 @@
             // 
             CBGpuModelFlags.DropDownStyle = ComboBoxStyle.DropDownList;
             CBGpuModelFlags.FormattingEnabled = true;
-            CBGpuModelFlags.Items.AddRange(new object[] { "Wave32", "Wave64", "Wave32 (重塑矩陣乘法)", "Wave64 (重塑矩陣乘法)" });
-            CBGpuModelFlags.Location = new Point(503, 41);
+            CBGpuModelFlags.Items.AddRange(new object[] { "Wave32", "Wave32 (可克隆)", "Wave32 (重塑矩陣乘法)", "Wave32 (重塑矩陣乘法、可克隆)", "Wave64", "Wave64 (可克隆)", "Wave64 (重塑矩陣乘法)", "Wave64 (重塑矩陣乘法、可克隆)" });
+            CBGpuModelFlags.Location = new Point(540, 41);
             CBGpuModelFlags.Name = "CBGpuModelFlags";
-            CBGpuModelFlags.Size = new Size(156, 23);
+            CBGpuModelFlags.Size = new Size(200, 23);
             CBGpuModelFlags.TabIndex = 3;
             // 
             // CBModelImplementation
@@ -236,11 +236,11 @@
             CBModelImplementation.Size = new Size(121, 23);
             CBModelImplementation.TabIndex = 1;
             // 
-            // CBSpeedUpAudio
+            // CBEnableSpeedUpAudio
             // 
             CBEnableSpeedUpAudio.AutoSize = true;
             CBEnableSpeedUpAudio.Location = new Point(393, 73);
-            CBEnableSpeedUpAudio.Name = "CBSpeedUpAudio";
+            CBEnableSpeedUpAudio.Name = "CBEnableSpeedUpAudio";
             CBEnableSpeedUpAudio.Size = new Size(141, 19);
             CBEnableSpeedUpAudio.TabIndex = 7;
             CBEnableSpeedUpAudio.Text = "使用 SpeedUpAudio";
