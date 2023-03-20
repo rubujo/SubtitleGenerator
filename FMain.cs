@@ -1,5 +1,6 @@
 using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Utils;
+using Whisper;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
 
 namespace SubtitleGenerator;
@@ -178,14 +179,15 @@ public partial class FMain : Form
 
             GlobalCTS = new();
             GlobalCT = GlobalCTS.Token;
+            SegmentDataSet.Clear();
+
+            SetOpenCCVariables();
 
             TBLog.Clear();
 
             PBProgress.Style = ProgressBarStyle.Marquee;
 
-            SetOpenCCVariables();
-
-            // 轉譯。
+            // 轉譯（檔案）。
             await WhisperUtil.Transcribe(
                 form: this,
                 inputFilePath: TBInputFilePath.Text,
@@ -195,6 +197,8 @@ public partial class FMain : Form
                 exportWebVTT: CBExportWebVTT.Checked,
                 enableConvertToWav: CBConvertToWav.Checked,
                 isStereo: true,
+                useiAudioReader: true,
+                useBufferFile: false,
                 modelImplementation: WhisperUtil.GetModelImplementation(CBModelImplementation.Text),
                 gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
@@ -212,6 +216,8 @@ public partial class FMain : Form
             ctrlSet2.SetEnabled(false);
 
             PBProgress.Style = ProgressBarStyle.Blocks;
+
+            SegmentDataSet.Clear();
         }
     }
 
@@ -237,8 +243,9 @@ public partial class FMain : Form
             // 重設變數。
             EnableOpenCC = false;
             GlobalOCCMode = OpenCCMode.None;
+            SegmentDataSet.Clear();
 
-            // 重設控制項。 
+            // 重設控制項。
             TBInputFilePath.Clear();
             CBModelImplementation.Text = "GPU";
 
@@ -258,6 +265,7 @@ public partial class FMain : Form
             CBEnableOpenCCTW2SP.Checked = false;
             CBExportWebVTT.Checked = false;
             TBLog.Clear();
+            LCaptureStatus.Text = string.Empty;
         }
         catch (Exception ex)
         {

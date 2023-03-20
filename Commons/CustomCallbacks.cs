@@ -17,24 +17,23 @@ internal class CustomCallbacks : Callbacks
     /// <summary>
     /// CancellationToken
     /// </summary>
-    private readonly CancellationToken? _cancellationToken;
+    private readonly CancellationToken _CancellationToken;
 
     /// <summary>
     /// 自定義 Callbacks
     /// </summary>
-    /// <param name="fMain">FMain</param>
-    /// <param name="cancellationToken">CancellationToken</param>
-    public CustomCallbacks(FMain fMain, CancellationToken? cancellationToken = default)
+    /// <param name="form">FMain</param>
+    public CustomCallbacks(FMain form, CancellationToken cancellationToken = default)
     {
-        _FMain = fMain;
-        _cancellationToken = cancellationToken;
+        _FMain = form;
+        _CancellationToken = cancellationToken;
     }
 
     protected override void onNewSegment(Context sender, int countNew)
     {
         try
         {
-            _cancellationToken?.ThrowIfCancellationRequested();
+            _CancellationToken.ThrowIfCancellationRequested();
 
             TranscribeResult transcribeResult = sender.results(eResultFlags.Timestamps);
 
@@ -63,6 +62,8 @@ internal class CustomCallbacks : Callbacks
                     $"{speaker}：{segenmt.text}";
 
                 FMain.WriteLog(_FMain, text);
+
+                _FMain.SegmentDataSet.Add(segenmt);
             }
         }
         catch (Exception ex)

@@ -157,6 +157,31 @@ public class WhisperUtil
     }
 
     /// <summary>
+    /// 取得錄音裝置清單
+    /// </summary>
+    /// <returns>字串陣列</returns>
+    public static string[] GetCaptureDeviceList()
+    {
+        return Library.initMediaFoundation()
+            .listCaptureDevices()
+            ?.Select(n => n.displayName)
+            ?.ToArray() ??
+            Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// 取得 CaptureDeviceId
+    /// </summary>
+    /// <param name="displayName">字串，錄音裝置的顯示名稱</param>
+    /// <returns>CaptureDeviceId</returns>
+    public static CaptureDeviceId? GetCaptureDeviceId(string displayName)
+    {
+        return Library.initMediaFoundation()
+            .listCaptureDevices()
+            ?.FirstOrDefault(n => n.displayName == displayName);
+    }
+
+    /// <summary>
     /// 取得 pfnLogMessage
     /// </summary>
     /// <param name="from">FMain</param>
@@ -250,7 +275,7 @@ public class WhisperUtil
     }
 
     /// <summary>
-    /// 轉譯
+    /// 轉譯（檔案）
     /// </summary>
     /// <param name="form">FMain</param>
     /// <param name="inputFilePath">字串，檔案的路徑</param>
@@ -260,6 +285,8 @@ public class WhisperUtil
     /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="enableConvertToWav">布林值，啟用轉換成 WAV 檔案，預設值為 false</param>
     /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
+    /// <param name="useiAudioReader">布林值，是否使用 iAudioReader，預設值為 false</param>
+    /// <param name="useBufferFile">布林值，是否將檔案先載入至記憶體，預設值為 false；useiAudioReader 需設為 true 才會生效</param>
     /// <param name="modelImplementation">eModelImplementation，預設值為 eModelImplementation.GPU</param>
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
@@ -276,6 +303,8 @@ public class WhisperUtil
         bool exportWebVTT = false,
         bool enableConvertToWav = false,
         bool isStereo = true,
+        bool useiAudioReader = false,
+        bool useBufferFile = false,
         eModelImplementation modelImplementation = eModelImplementation.GPU,
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
         string? adapter = null,
@@ -338,26 +367,45 @@ public class WhisperUtil
                     enableSpeedUpAudio: enableSpeedUpAudio,
                     samplingStrategyType: samplingStrategyType);
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
-                using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(
-                    path: filePath,
-                    stereo: isStereo);
+
+                CustomCallbacks customCallbacks = new(
+                    form: form,
+                    cancellationToken: cancellationToken);
 
                 FMain.WriteLog(form, "正在開始轉譯作業……");
 
-                CustomCallbacks customCallbacks = new(form, cancellationToken);
+                if (useiAudioReader)
+                {
+                    using iAudioReader audioReader = GetAudioReader(
+                        mediaFoundation: mediaFoundation,
+                        path: filePath,
+                        isStereo: isStereo,
+                        useBufferFile: useBufferFile);
 
-                context.runFull(
-                    buffer: audioBuffer,
-                    callbacks: customCallbacks);
+                    context.runFull(
+                        reader: audioReader,
+                        pfnProgress: GetPFNProgress(form),
+                        callbacks: customCallbacks);
+                }
+                else
+                {
+                    using iAudioBuffer audioBuffer = mediaFoundation.loadAudioFile(
+                        path: filePath,
+                        stereo: isStereo);
+
+                    context.runFull(
+                        buffer: audioBuffer,
+                        callbacks: customCallbacks);
+                }
 
                 FMain.WriteLog(form, "轉譯作業完成。");
 
                 // 建立字幕檔。
                 string subtitleFilePath = CreateSubtitleFile(
-                        form,
-                        context,
-                        inputFilePath,
-                        exportWebVTT),
+                        form: form,
+                        context: context,
+                        inputFilePath: inputFilePath,
+                        exportWebVTT: exportWebVTT),
                     subtitleFileName = Path.GetFileName(subtitleFilePath),
                     subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
                         .Replace(subtitleFileName, string.Empty);
@@ -420,7 +468,7 @@ public class WhisperUtil
     }
 
     /// <summary>
-    /// 轉譯
+    /// 轉譯（錄音）
     /// </summary>
     /// <param name="form">FMain</param>
     /// <param name="captureDeviceId">CaptureDeviceId</param>
@@ -451,8 +499,6 @@ public class WhisperUtil
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         CancellationToken cancellationToken = default)
     {
-        Context? context = null;
-
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -500,17 +546,21 @@ public class WhisperUtil
                 if (isStereo)
                 {
                     captureParams.flags = eCaptureFlags.Stereo;
+                    // TODO: 2023-03-20 待確認如何進行設定，
+                    // 目前已知 minDuration 或 maxDuration 的值為 0 時，會發生例外。
+                    captureParams.dropStartSilence = 0.25f;
+                    captureParams.maxDuration = 11f;
+                    captureParams.minDuration = 7f;
+                    captureParams.pauseDuration = 0.333f;
                 }
 
                 using iAudioCapture audioCapture = mediaFoundation
                     .openCaptureDevice(captureDeviceId, captureParams);
 
-                CustomCallbacks customCallbacks = new(
-                    fMain: form,
-                    cancellationToken: cancellationToken);
+                CustomCallbacks customCallbacks = new(form: form);
 
                 CustomCaptureCallbacks customCaptureCallbacks = new(
-                    fMain: form,
+                    form: form,
                     cancellationToken: cancellationToken);
 
                 context.runCapture(
@@ -523,26 +573,18 @@ public class WhisperUtil
         {
             FMain.WriteLog(form, "已取消轉譯作業。");
 
-            if (context == null)
-            {
-                FMain.WriteLog(form, "[Debug] context is null.");
-            }
+            // 建立字幕檔。
+            string subtitleFilePath = CreateSubtitleFile(
+                    form: form,
+                    segments: form.SegmentDataSet,
+                    inputFilePath: Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
+                    exportWebVTT: exportWebVTT),
+                subtitleFileName = Path.GetFileName(subtitleFilePath),
+                subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
+                    .Replace(subtitleFileName, string.Empty);
 
-            if (context != null)
-            {
-                // 建立字幕檔。
-                string subtitleFilePath = CreateSubtitleFile(
-                        form,
-                        context,
-                        Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
-                        exportWebVTT),
-                    subtitleFileName = Path.GetFileName(subtitleFilePath),
-                    subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
-                        .Replace(subtitleFileName, string.Empty);
-
-                // 開啟字幕檔所位於的資料夾。
-                FMain.OpenFolder(form, subtitleFileFolder);
-            }
+            // 開啟字幕檔所位於的資料夾。
+            FMain.OpenFolder(form, subtitleFileFolder);
         }
         catch (ApplicationException ae)
         {
@@ -556,6 +598,29 @@ public class WhisperUtil
 
             FMain.ShowErrMsg(form, ex.ToString());
         }
+    }
+
+    /// <summary>
+    /// 取得 iAudioReader
+    /// </summary>
+    /// <param name="mediaFoundation">iMediaFoundation</param>
+    /// <param name="path">路徑，檔案的路徑</param>
+    /// <param name="isStereo">布林值，是否為立體聲，預設值為 true</param>
+    /// <param name="useBufferFile">布林值，是否將檔案先載入至記憶體，預設值為 false</param>
+    /// <returns>iAudioReader</returns>
+    public static iAudioReader GetAudioReader(
+        iMediaFoundation mediaFoundation,
+        string path,
+        bool isStereo = true,
+        bool useBufferFile = false)
+    {
+        return useBufferFile ?
+            mediaFoundation.loadAudioFileData(
+                span: File.ReadAllBytes(path),
+                stereo: isStereo) :
+            mediaFoundation.openAudioFile(
+                path: path,
+                stereo: isStereo);
     }
 
     /// <summary>
@@ -582,13 +647,17 @@ public class WhisperUtil
     {
         Context context = model.createContext();
 
-        context.parameters.setFlag(eFullParamsFlags.PrintRealtime, false);
+        context.parameters.setFlag(eFullParamsFlags.NoContext, true);
         context.parameters.setFlag(eFullParamsFlags.PrintProgress, true);
-        context.parameters.setFlag(eFullParamsFlags.PrintTimestamps, true);
+        context.parameters.setFlag(eFullParamsFlags.PrintRealtime, false);
         context.parameters.setFlag(eFullParamsFlags.PrintSpecial, false);
-        context.parameters.setFlag(eFullParamsFlags.Translate, enableTranslate);
+        context.parameters.setFlag(eFullParamsFlags.PrintTimestamps, true);
+        context.parameters.setFlag(eFullParamsFlags.SingleSegment, false);
         // TODO: 2023-03-16 在 Const-me/Whisper 函式庫內為實驗性質，在 GPU 模型沒有實作此功能，使用時會發生例外。
         context.parameters.setFlag(eFullParamsFlags.SpeedupAudio, enableSpeedUpAudio);
+        context.parameters.setFlag(eFullParamsFlags.TokenTimestamps, false);
+        context.parameters.setFlag(eFullParamsFlags.Translate, enableTranslate);
+
         // 反查時失敗時則使用 eLanguage.English。
         context.parameters.language = Library.languageFromCode(language) ?? eLanguage.English;
         context.parameters.cpuThreads = Environment.ProcessorCount;
@@ -681,6 +750,57 @@ public class WhisperUtil
         }
 
         for (int i = 0; i < segments.Length; i++)
+        {
+            streamWriter.WriteLine(i + 1);
+
+            sSegment segment = segments[i];
+
+            string startTime = exportWebVTT ?
+                    PrintTime(segment.time.begin) :
+                    PrintTimeWithComma(segment.time.begin),
+                endTime = exportWebVTT ?
+                    PrintTime(segment.time.end) :
+                    PrintTimeWithComma(segment.time.end);
+
+            streamWriter.WriteLine("{0} --> {1}", startTime, endTime);
+            streamWriter.WriteLine(GetSegmentText(form, segment));
+            streamWriter.WriteLine();
+        }
+
+        FMain.WriteLog(form, $"已建立 {fileType} 字幕檔：{filePath}");
+
+        return filePath;
+    }
+
+    /// <summary>
+    /// 建立字幕檔
+    /// </summary>
+    /// <param name="form">FMain</param>
+    /// <param name="segments">List&lt;sSegment&gt;</param>
+    /// <param name="inputFilePath">字串，檔案的路徑</param>
+    /// <param name="exportWebVTT">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <returns>字串，字幕檔案的路徑</returns>
+    public static string CreateSubtitleFile(
+        FMain form,
+        List<sSegment> segments,
+        string inputFilePath,
+        bool exportWebVTT)
+    {
+        string extName = exportWebVTT ? ".vtt" : ".srt",
+            filePath = Path.ChangeExtension(inputFilePath, extName),
+            fileType = exportWebVTT ? "WebVTT" : "SubRip Text";
+
+        FMain.WriteLog(form, $"開始建立 {fileType} 字幕檔……");
+
+        using StreamWriter streamWriter = File.CreateText(filePath);
+
+        if (exportWebVTT)
+        {
+            streamWriter.WriteLine("WEBVTT ");
+            streamWriter.WriteLine();
+        }
+
+        for (int i = 0; i < segments.Count; i++)
         {
             streamWriter.WriteLine(i + 1);
 

@@ -1,4 +1,5 @@
-﻿using static SubtitleGenerator.Commons.Sets.EnumSet;
+﻿using Whisper;
+using static SubtitleGenerator.Commons.Sets.EnumSet;
 
 namespace SubtitleGenerator;
 
@@ -34,4 +35,9 @@ partial class FMain
     /// OpenCC 的模式
     /// </summary>
     public OpenCCMode GlobalOCCMode = OpenCCMode.None;
+
+    /// <summary>
+    /// 段列表
+    /// </summary>
+    public List<sSegment> SegmentDataSet = new();
 }

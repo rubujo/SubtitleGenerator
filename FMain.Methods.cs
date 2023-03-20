@@ -54,6 +54,7 @@ partial class FMain
 
         CBGpuModelFlags.Text = "Wave32";
         BtnCancel.Enabled = false;
+        LCaptureStatus.Text = string.Empty;
 
         // 檢查資料夾。
         CheckFolders();
@@ -217,6 +218,15 @@ partial class FMain
     public TextBox GetTBLog()
     {
         return TBLog;
+    }
+
+    /// <summary>
+    /// 取得 LCaptureStatus
+    /// </summary>
+    /// <returns>Label</returns>
+    public Label GetLCaptureStatus()
+    {
+        return LCaptureStatus;
     }
 
     /// <summary>

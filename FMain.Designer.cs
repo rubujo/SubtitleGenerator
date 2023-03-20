@@ -48,6 +48,7 @@
             CBGpuModelFlags = new ComboBox();
             CBModelImplementation = new ComboBox();
             CBEnableSpeedUpAudio = new CheckBox();
+            LCaptureStatus = new Label();
             SuspendLayout();
             // 
             // TBInputFilePath
@@ -143,9 +144,9 @@
             LVersion.AutoSize = true;
             LVersion.Location = new Point(12, 448);
             LVersion.Name = "LVersion";
-            LVersion.Size = new Size(43, 15);
+            LVersion.Size = new Size(142, 15);
             LVersion.TabIndex = 17;
-            LVersion.Text = "版本：";
+            LVersion.Text = "版本：v999.999.999.999";
             // 
             // CBSamplingStrategies
             // 
@@ -173,7 +174,7 @@
             PBProgress.Location = new Point(722, 444);
             PBProgress.Name = "PBProgress";
             PBProgress.Size = new Size(100, 23);
-            PBProgress.TabIndex = 18;
+            PBProgress.TabIndex = 19;
             // 
             // CBEnableOpenCCS2TWP
             // 
@@ -246,11 +247,21 @@
             CBEnableSpeedUpAudio.Text = "使用 SpeedUpAudio";
             CBEnableSpeedUpAudio.UseVisualStyleBackColor = true;
             // 
+            // LCaptureStatus
+            // 
+            LCaptureStatus.AutoSize = true;
+            LCaptureStatus.Location = new Point(160, 448);
+            LCaptureStatus.Name = "LCaptureStatus";
+            LCaptureStatus.Size = new Size(67, 15);
+            LCaptureStatus.TabIndex = 18;
+            LCaptureStatus.Text = "捕捉狀態：";
+            // 
             // FMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(834, 476);
+            Controls.Add(LCaptureStatus);
             Controls.Add(CBEnableSpeedUpAudio);
             Controls.Add(CBModelImplementation);
             Controls.Add(CBGpuModelFlags);
@@ -302,5 +313,6 @@
         private ComboBox CBGpuModelFlags;
         private ComboBox CBModelImplementation;
         private CheckBox CBEnableSpeedUpAudio;
+        private Label LCaptureStatus;
     }
 }

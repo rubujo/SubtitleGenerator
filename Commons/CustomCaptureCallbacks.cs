@@ -1,4 +1,5 @@
-﻿using Whisper;
+﻿using SubtitleGenerator.Commons.Extensions;
+using Whisper;
 using Whisper.Internal;
 
 namespace SubtitleGenerator.Commons;
@@ -14,9 +15,14 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
     private readonly FMain _FMain;
 
     /// <summary>
+    /// LCaptureStatus
+    /// </summary>
+    private readonly Label _LCaptureStatus;
+
+    /// <summary>
     /// CancellationToken
     /// </summary>
-    private readonly CancellationToken? _cancellationToken;
+    private readonly CancellationToken _CancellationToken;
 
     /// <summary>
     /// 應該取消
@@ -26,32 +32,47 @@ internal class CustomCaptureCallbacks : CaptureCallbacks
     /// <summary>
     /// 自定義 Callbacks
     /// </summary>
-    /// <param name="fMain">FMain</param>
-    /// <param name="cancellationToken">CancellationToken</param>
-    public CustomCaptureCallbacks(FMain fMain, CancellationToken? cancellationToken = default)
+    /// <param name="form">FMain</param>
+    public CustomCaptureCallbacks(FMain form, CancellationToken cancellationToken = default)
     {
-        _FMain = fMain;
-        _cancellationToken = cancellationToken;
+        _FMain = form;
+        _LCaptureStatus = _FMain.GetLCaptureStatus();
+        _CancellationToken = cancellationToken;
     }
 
-    protected override bool shouldCancel(Context sender) => ShouldCancel;
-
-    protected override void captureStatusChanged(Context sender, eCaptureStatus status)
+    protected override bool shouldCancel(Context sender)
     {
         try
         {
-            if (_cancellationToken?.IsCancellationRequested == true)
-            {
-                ShouldCancel = true;
-            }
+            _CancellationToken.ThrowIfCancellationRequested();
 
-            _cancellationToken?.ThrowIfCancellationRequested();
-
-            FMain.WriteLog(_FMain, $"捕捉狀態：{status}");
+            ShouldCancel = _CancellationToken.IsCancellationRequested;
         }
         catch (Exception ex)
         {
+            // 清除控制項。
+            UpdateControl();
+
             NativeLogger.throwForHR(ex.HResult);
         }
+
+        return ShouldCancel;
+    }
+
+    protected override void captureStatusChanged(Context sender, eCaptureStatus status)
+    {
+        UpdateControl($"捕捉狀態：{status}");
+    }
+
+    /// <summary>
+    /// 更新控制項
+    /// </summary>
+    /// <param name="text">字串，文字內容，預設值為空白</param>
+    private void UpdateControl(string text = "")
+    {
+        _LCaptureStatus.InvokeIfRequired(() =>
+        {
+            _LCaptureStatus.Text = text;
+        });
     }
 }
