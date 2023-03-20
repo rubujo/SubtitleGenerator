@@ -49,6 +49,8 @@
             CBModelImplementation = new ComboBox();
             CBEnableSpeedUpAudio = new CheckBox();
             LCaptureStatus = new Label();
+            CBCaptureDevices = new ComboBox();
+            BtnMicTranscribe = new Button();
             SuspendLayout();
             // 
             // TBInputFilePath
@@ -73,8 +75,8 @@
             BtnTranscribe.Location = new Point(746, 12);
             BtnTranscribe.Name = "BtnTranscribe";
             BtnTranscribe.Size = new Size(75, 23);
-            BtnTranscribe.TabIndex = 13;
-            BtnTranscribe.Text = "轉譯成字幕";
+            BtnTranscribe.TabIndex = 15;
+            BtnTranscribe.Text = "檔案轉譯";
             BtnTranscribe.UseVisualStyleBackColor = true;
             BtnTranscribe.Click += BtnTranscribe_Click;
             // 
@@ -85,7 +87,7 @@
             TBLog.Name = "TBLog";
             TBLog.ScrollBars = ScrollBars.Both;
             TBLog.Size = new Size(809, 313);
-            TBLog.TabIndex = 16;
+            TBLog.TabIndex = 19;
             // 
             // CBLanguages
             // 
@@ -95,15 +97,15 @@
             CBLanguages.Location = new Point(266, 71);
             CBLanguages.Name = "CBLanguages";
             CBLanguages.Size = new Size(121, 23);
-            CBLanguages.TabIndex = 6;
+            CBLanguages.TabIndex = 7;
             CBLanguages.SelectedIndexChanged += CBLanguages_SelectedIndexChanged;
             // 
             // BtnCancel
             // 
-            BtnCancel.Location = new Point(746, 41);
+            BtnCancel.Location = new Point(746, 71);
             BtnCancel.Name = "BtnCancel";
             BtnCancel.Size = new Size(75, 23);
-            BtnCancel.TabIndex = 14;
+            BtnCancel.TabIndex = 17;
             BtnCancel.Text = "取消";
             BtnCancel.UseVisualStyleBackColor = true;
             BtnCancel.Click += BtnCancel_Click;
@@ -111,10 +113,10 @@
             // CBEnableTranslate
             // 
             CBEnableTranslate.AutoSize = true;
-            CBEnableTranslate.Location = new Point(540, 73);
+            CBEnableTranslate.Location = new Point(165, 100);
             CBEnableTranslate.Name = "CBEnableTranslate";
             CBEnableTranslate.Size = new Size(86, 19);
-            CBEnableTranslate.TabIndex = 8;
+            CBEnableTranslate.TabIndex = 10;
             CBEnableTranslate.Text = "翻譯成英文";
             CBEnableTranslate.UseVisualStyleBackColor = true;
             CBEnableTranslate.CheckedChanged += CBEnableTranslate_CheckedChanged;
@@ -122,10 +124,10 @@
             // CBExportWebVTT
             // 
             CBExportWebVTT.AutoSize = true;
-            CBExportWebVTT.Location = new Point(411, 98);
+            CBExportWebVTT.Location = new Point(656, 100);
             CBExportWebVTT.Name = "CBExportWebVTT";
             CBExportWebVTT.Size = new Size(129, 19);
-            CBExportWebVTT.TabIndex = 12;
+            CBExportWebVTT.TabIndex = 14;
             CBExportWebVTT.Text = "匯出 WebVTT 格式";
             CBExportWebVTT.UseVisualStyleBackColor = true;
             // 
@@ -137,7 +139,7 @@
             CBModels.Location = new Point(12, 71);
             CBModels.Name = "CBModels";
             CBModels.Size = new Size(121, 23);
-            CBModels.TabIndex = 4;
+            CBModels.TabIndex = 5;
             // 
             // LVersion
             // 
@@ -145,7 +147,7 @@
             LVersion.Location = new Point(12, 448);
             LVersion.Name = "LVersion";
             LVersion.Size = new Size(142, 15);
-            LVersion.TabIndex = 17;
+            LVersion.TabIndex = 20;
             LVersion.Text = "版本：v999.999.999.999";
             // 
             // CBSamplingStrategies
@@ -156,7 +158,7 @@
             CBSamplingStrategies.Location = new Point(139, 70);
             CBSamplingStrategies.Name = "CBSamplingStrategies";
             CBSamplingStrategies.Size = new Size(121, 23);
-            CBSamplingStrategies.TabIndex = 5;
+            CBSamplingStrategies.TabIndex = 6;
             CBSamplingStrategies.SelectedIndexChanged += CBSamplingStrategies_SelectedIndexChanged;
             // 
             // BtnReset
@@ -164,7 +166,7 @@
             BtnReset.Location = new Point(641, 444);
             BtnReset.Name = "BtnReset";
             BtnReset.Size = new Size(75, 23);
-            BtnReset.TabIndex = 15;
+            BtnReset.TabIndex = 18;
             BtnReset.Text = "重設";
             BtnReset.UseVisualStyleBackColor = true;
             BtnReset.Click += BtnReset_Click;
@@ -174,15 +176,15 @@
             PBProgress.Location = new Point(722, 444);
             PBProgress.Name = "PBProgress";
             PBProgress.Size = new Size(100, 23);
-            PBProgress.TabIndex = 19;
+            PBProgress.TabIndex = 22;
             // 
             // CBEnableOpenCCS2TWP
             // 
             CBEnableOpenCCS2TWP.AutoSize = true;
-            CBEnableOpenCCS2TWP.Location = new Point(111, 99);
+            CBEnableOpenCCS2TWP.Location = new Point(356, 100);
             CBEnableOpenCCS2TWP.Name = "CBEnableOpenCCS2TWP";
             CBEnableOpenCCS2TWP.Size = new Size(144, 19);
-            CBEnableOpenCCS2TWP.TabIndex = 10;
+            CBEnableOpenCCS2TWP.TabIndex = 12;
             CBEnableOpenCCS2TWP.Text = "啟用 OpenCC S2TWP";
             CBEnableOpenCCS2TWP.UseVisualStyleBackColor = true;
             CBEnableOpenCCS2TWP.CheckedChanged += CBEnableOpenCCS2TWP_CheckedChanged;
@@ -190,10 +192,10 @@
             // CBEnableOpenCCTW2SP
             // 
             CBEnableOpenCCTW2SP.AutoSize = true;
-            CBEnableOpenCCTW2SP.Location = new Point(261, 99);
+            CBEnableOpenCCTW2SP.Location = new Point(506, 100);
             CBEnableOpenCCTW2SP.Name = "CBEnableOpenCCTW2SP";
             CBEnableOpenCCTW2SP.Size = new Size(144, 19);
-            CBEnableOpenCCTW2SP.TabIndex = 11;
+            CBEnableOpenCCTW2SP.TabIndex = 13;
             CBEnableOpenCCTW2SP.Text = "啟用 OpenCC TW2SP";
             CBEnableOpenCCTW2SP.UseVisualStyleBackColor = true;
             CBEnableOpenCCTW2SP.CheckedChanged += CBEnableOpenCCTW2SP_CheckedChanged;
@@ -205,15 +207,15 @@
             CBGPUs.Location = new Point(139, 41);
             CBGPUs.Name = "CBGPUs";
             CBGPUs.Size = new Size(395, 23);
-            CBGPUs.TabIndex = 2;
+            CBGPUs.TabIndex = 3;
             // 
             // CBConvertToWav
             // 
             CBConvertToWav.AutoSize = true;
-            CBConvertToWav.Location = new Point(12, 100);
+            CBConvertToWav.Location = new Point(257, 100);
             CBConvertToWav.Name = "CBConvertToWav";
             CBConvertToWav.Size = new Size(93, 19);
-            CBConvertToWav.TabIndex = 9;
+            CBConvertToWav.TabIndex = 11;
             CBConvertToWav.Text = "轉換成 WAV";
             CBConvertToWav.UseVisualStyleBackColor = true;
             // 
@@ -225,7 +227,7 @@
             CBGpuModelFlags.Location = new Point(540, 41);
             CBGpuModelFlags.Name = "CBGpuModelFlags";
             CBGpuModelFlags.Size = new Size(200, 23);
-            CBGpuModelFlags.TabIndex = 3;
+            CBGpuModelFlags.TabIndex = 4;
             // 
             // CBModelImplementation
             // 
@@ -235,16 +237,16 @@
             CBModelImplementation.Location = new Point(12, 41);
             CBModelImplementation.Name = "CBModelImplementation";
             CBModelImplementation.Size = new Size(121, 23);
-            CBModelImplementation.TabIndex = 1;
+            CBModelImplementation.TabIndex = 2;
             // 
             // CBEnableSpeedUpAudio
             // 
             CBEnableSpeedUpAudio.AutoSize = true;
-            CBEnableSpeedUpAudio.Location = new Point(393, 73);
+            CBEnableSpeedUpAudio.Location = new Point(12, 100);
             CBEnableSpeedUpAudio.Name = "CBEnableSpeedUpAudio";
-            CBEnableSpeedUpAudio.Size = new Size(141, 19);
-            CBEnableSpeedUpAudio.TabIndex = 7;
-            CBEnableSpeedUpAudio.Text = "使用 SpeedUpAudio";
+            CBEnableSpeedUpAudio.Size = new Size(147, 19);
+            CBEnableSpeedUpAudio.TabIndex = 9;
+            CBEnableSpeedUpAudio.Text = "使用 Speed Up Audio";
             CBEnableSpeedUpAudio.UseVisualStyleBackColor = true;
             // 
             // LCaptureStatus
@@ -253,14 +255,35 @@
             LCaptureStatus.Location = new Point(160, 448);
             LCaptureStatus.Name = "LCaptureStatus";
             LCaptureStatus.Size = new Size(67, 15);
-            LCaptureStatus.TabIndex = 18;
+            LCaptureStatus.TabIndex = 21;
             LCaptureStatus.Text = "捕捉狀態：";
+            // 
+            // CBCaptureDevices
+            // 
+            CBCaptureDevices.DropDownStyle = ComboBoxStyle.DropDownList;
+            CBCaptureDevices.FormattingEnabled = true;
+            CBCaptureDevices.Location = new Point(393, 71);
+            CBCaptureDevices.Name = "CBCaptureDevices";
+            CBCaptureDevices.Size = new Size(347, 23);
+            CBCaptureDevices.TabIndex = 8;
+            // 
+            // BtnMicTranscribe
+            // 
+            BtnMicTranscribe.Location = new Point(746, 41);
+            BtnMicTranscribe.Name = "BtnMicTranscribe";
+            BtnMicTranscribe.Size = new Size(75, 23);
+            BtnMicTranscribe.TabIndex = 16;
+            BtnMicTranscribe.Text = "錄音轉譯";
+            BtnMicTranscribe.UseVisualStyleBackColor = true;
+            BtnMicTranscribe.Click += BtnMicTranscribe_Click;
             // 
             // FMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(834, 476);
+            Controls.Add(BtnMicTranscribe);
+            Controls.Add(CBCaptureDevices);
             Controls.Add(LCaptureStatus);
             Controls.Add(CBEnableSpeedUpAudio);
             Controls.Add(CBModelImplementation);
@@ -314,5 +337,7 @@
         private ComboBox CBModelImplementation;
         private CheckBox CBEnableSpeedUpAudio;
         private Label LCaptureStatus;
+        private ComboBox CBCaptureDevices;
+        private Button BtnMicTranscribe;
     }
 }

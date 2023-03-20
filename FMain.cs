@@ -1,7 +1,7 @@
 using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Utils;
-using Whisper;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
+using Whisper;
 
 namespace SubtitleGenerator;
 
@@ -144,19 +144,21 @@ public partial class FMain : Form
         {
             TBInputFilePath,
             BtnSelectInputFile,
+            BtnTranscribe,
+            BtnMicTranscribe,
             CBModelImplementation,
             CBGPUs,
             CBGpuModelFlags,
             CBModels,
             CBSamplingStrategies,
             CBLanguages,
+            CBCaptureDevices,
             CBEnableSpeedUpAudio,
             CBEnableTranslate,
             CBConvertToWav,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
             CBExportWebVTT,
-            BtnTranscribe,
             BtnReset
         };
 
@@ -167,15 +169,15 @@ public partial class FMain : Form
 
         try
         {
+            ctrlSet1.SetEnabled(false);
+            ctrlSet2.SetEnabled(true);
+
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
                 ShowWarnMsg(this, "請先選擇要轉譯的視訊或音訊檔案。");
 
                 return;
             }
-
-            ctrlSet1.SetEnabled(false);
-            ctrlSet2.SetEnabled(true);
 
             GlobalCTS = new();
             GlobalCT = GlobalCTS.Token;
@@ -199,6 +201,105 @@ public partial class FMain : Form
                 isStereo: true,
                 useiAudioReader: true,
                 useBufferFile: false,
+                modelImplementation: WhisperUtil.GetModelImplementation(CBModelImplementation.Text),
+                gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
+                adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
+                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+                cancellationToken: GlobalCT);
+        }
+        catch (Exception ex)
+        {
+            ShowErrMsg(this, ex.ToString());
+        }
+        finally
+        {
+            ctrlSet1.SetEnabled(true);
+            ctrlSet2.SetEnabled(false);
+
+            PBProgress.Style = ProgressBarStyle.Blocks;
+
+            SegmentDataSet.Clear();
+        }
+    }
+
+    private async void BtnMicTranscribe_Click(object sender, EventArgs e)
+    {
+        Control[] ctrlSet1 =
+        {
+            TBInputFilePath,
+            BtnSelectInputFile,
+            BtnTranscribe,
+            BtnMicTranscribe,
+            CBModelImplementation,
+            CBGPUs,
+            CBGpuModelFlags,
+            CBModels,
+            CBSamplingStrategies,
+            CBLanguages,
+            CBCaptureDevices,
+            CBEnableSpeedUpAudio,
+            CBEnableTranslate,
+            CBConvertToWav,
+            CBEnableOpenCCS2TWP,
+            CBEnableOpenCCTW2SP,
+            CBExportWebVTT,
+            BtnReset
+        };
+
+        Control[] ctrlSet2 =
+        {
+            BtnCancel
+        };
+
+        try
+        {
+            ctrlSet1.SetEnabled(false);
+            ctrlSet2.SetEnabled(true);
+
+            if (string.IsNullOrEmpty(CBCaptureDevices.Text))
+            {
+                ShowWarnMsg(this, "請先選擇您要使用的錄音裝置。");
+
+                return;
+            }
+
+            CaptureDeviceId? captureDeviceId = WhisperUtil
+                .GetCaptureDeviceId(CBCaptureDevices.Text);
+
+            if (captureDeviceId == null)
+            {
+                ShowErrMsg(this, "發生錯誤：無法使用您已選擇的錄音裝置，請確認該錄音裝置已安裝完成。");
+
+                return;
+            }
+
+            if (CBConvertToWav.Checked)
+            {
+                CBConvertToWav.Checked = false;
+
+                ShowWarnMsg(this, "注意，此功能不支援此選項。");
+            }
+
+            GlobalCTS = new();
+            GlobalCT = GlobalCTS.Token;
+            SegmentDataSet.Clear();
+
+            SetOpenCCVariables();
+
+            TBLog.Clear();
+
+            PBProgress.Style = ProgressBarStyle.Marquee;
+
+            // 轉譯（檔案）。
+            await WhisperUtil.Transcribe(
+                form: this,
+                captureDeviceId: captureDeviceId.Value,
+                language: CBLanguages.Text,
+                enableTranslate: CBEnableTranslate.Checked,
+                enableSpeedUpAudio: CBEnableSpeedUpAudio.Checked,
+                exportWebVTT: CBExportWebVTT.Checked,
+                isStereo: true,
                 modelImplementation: WhisperUtil.GetModelImplementation(CBModelImplementation.Text),
                 gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
@@ -249,6 +350,9 @@ public partial class FMain : Form
             TBInputFilePath.Clear();
             CBModelImplementation.Text = "GPU";
 
+            CBGPUs.DataSource = null;
+            CBGPUs.DataSource = WhisperUtil.GetGpuList();
+
             if (CBGPUs.Items.Count > 0)
             {
                 CBGPUs.SelectedIndex = 0;
@@ -257,7 +361,16 @@ public partial class FMain : Form
             CBGpuModelFlags.Text = "Wave32";
             CBModels.Text = "Small";
             CBSamplingStrategies.Text = "Default";
-            CBLanguages.Text = "zh";
+            CBLanguages.Text = "en";
+
+            CBCaptureDevices.DataSource = null;
+            CBCaptureDevices.DataSource = WhisperUtil.GetCaptureDeviceList();
+
+            if (CBCaptureDevices.Items.Count > 0)
+            {
+                CBCaptureDevices.SelectedIndex = 0;
+            }
+
             CBEnableSpeedUpAudio.Checked = false;
             CBEnableTranslate.Checked = false;
             CBConvertToWav.Checked = false;

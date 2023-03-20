@@ -34,6 +34,7 @@ partial class FMain
         GlobalTT.SetToolTip(CBModels, "模型");
         GlobalTT.SetToolTip(CBSamplingStrategies, "抽樣策略");
         GlobalTT.SetToolTip(CBLanguages, "語言");
+        GlobalTT.SetToolTip(CBCaptureDevices, "錄音裝置");
         GlobalTT.SetToolTip(CBEnableTranslate, "將轉譯的內容翻譯成英文");
         GlobalTT.SetToolTip(CBConvertToWav, "先透過 FFmpeg 將選擇的檔案轉換成 WAV 格式的暫時檔案後，在進行轉譯");
         GlobalTT.SetToolTip(CBEnableOpenCCS2TWP, "使用 OpenCC 將轉譯的內容，從「簡體中文」轉換成「繁體中文（臺灣）」");
@@ -42,7 +43,7 @@ partial class FMain
         // 設定控制項。
         CBModels.Text = "Small";
         CBSamplingStrategies.Text = "Default";
-        CBLanguages.Text = "zh";
+        CBLanguages.Text = "en";
         CBModelImplementation.Text = "GPU";
 
         CBGPUs.DataSource = WhisperUtil.GetGpuList();
@@ -53,6 +54,14 @@ partial class FMain
         }
 
         CBGpuModelFlags.Text = "Wave32";
+
+        CBCaptureDevices.DataSource = WhisperUtil.GetCaptureDeviceList();
+
+        if (CBCaptureDevices.Items.Count > 0)
+        {
+            CBCaptureDevices.SelectedIndex = 0;
+        }
+
         BtnCancel.Enabled = false;
         LCaptureStatus.Text = string.Empty;
 

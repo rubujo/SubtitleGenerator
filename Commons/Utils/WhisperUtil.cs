@@ -1,4 +1,5 @@
 ﻿using OpenCCNET;
+using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Sets;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
 using System.Diagnostics;
@@ -312,13 +313,13 @@ public class WhisperUtil
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         CancellationToken cancellationToken = default)
     {
+        Stopwatch stopWatch = new();
+
+        stopWatch.Start();
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            Stopwatch stopWatch = new();
-
-            stopWatch.Start();
 
             string tempFilePath = await Task.Run(async () =>
             {
@@ -413,7 +414,6 @@ public class WhisperUtil
                 stopWatch.Stop();
 
                 FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
-
                 FMain.ShowMsg(form, "轉譯作業完成。");
 
                 // 開啟字幕檔所位於的資料夾。
@@ -436,7 +436,10 @@ public class WhisperUtil
         }
         catch (OperationCanceledException)
         {
+            stopWatch.Stop();
+
             FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
             if (enableConvertToWav)
             {
@@ -445,7 +448,10 @@ public class WhisperUtil
         }
         catch (ApplicationException ae)
         {
+            stopWatch.Stop();
+
             FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
             if (enableConvertToWav)
             {
@@ -456,7 +462,10 @@ public class WhisperUtil
         }
         catch (Exception ex)
         {
+            stopWatch.Stop();
+
             FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
             if (enableConvertToWav)
             {
@@ -499,6 +508,10 @@ public class WhisperUtil
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         CancellationToken cancellationToken = default)
     {
+        Stopwatch stopWatch = new();
+
+        stopWatch.Start();
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -557,7 +570,9 @@ public class WhisperUtil
                 using iAudioCapture audioCapture = mediaFoundation
                     .openCaptureDevice(captureDeviceId, captureParams);
 
-                CustomCallbacks customCallbacks = new(form: form);
+                CustomCallbacks customCallbacks = new(
+                    form: form,
+                    cancellationToken: cancellationToken);
 
                 CustomCaptureCallbacks customCaptureCallbacks = new(
                     form: form,
@@ -573,11 +588,20 @@ public class WhisperUtil
         {
             FMain.WriteLog(form, "已取消轉譯作業。");
 
+            Label lCaptureStatus = form.GetLCaptureStatus();
+
+            lCaptureStatus.InvokeIfRequired(() =>
+            {
+                lCaptureStatus.Text = string.Empty;
+            });
+
             // 建立字幕檔。
             string subtitleFilePath = CreateSubtitleFile(
                     form: form,
                     segments: form.SegmentDataSet,
-                    inputFilePath: Path.Combine(FolderSet.TempFolderPath, Path.GetRandomFileName()),
+                    inputFilePath: Path.Combine(
+                        FolderSet.TempFolderPath,
+                        $"錄音轉譯_{DateTime.Now:yyyyMMddHHmmssfff}"),
                     exportWebVTT: exportWebVTT),
                 subtitleFileName = Path.GetFileName(subtitleFilePath),
                 subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
@@ -588,13 +612,19 @@ public class WhisperUtil
         }
         catch (ApplicationException ae)
         {
+            stopWatch.Stop();
+
             FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
             FMain.ShowErrMsg(form, ae.Message);
         }
         catch (Exception ex)
         {
+            stopWatch.Stop();
+
             FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
             FMain.ShowErrMsg(form, ex.ToString());
         }
@@ -720,7 +750,7 @@ public class WhisperUtil
     }
 
     /// <summary>
-    /// 建立字幕檔
+    /// 建立字幕檔（檔案）
     /// </summary>
     /// <param name="form">FMain</param>
     /// <param name="context">Context</param>
@@ -773,7 +803,7 @@ public class WhisperUtil
     }
 
     /// <summary>
-    /// 建立字幕檔
+    /// 建立字幕檔（錄音）
     /// </summary>
     /// <param name="form">FMain</param>
     /// <param name="segments">List&lt;sSegment&gt;</param>
