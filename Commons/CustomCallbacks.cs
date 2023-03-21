@@ -7,7 +7,7 @@ namespace SubtitleGenerator.Commons;
 /// <summary>
 /// 自定義 Callbacks
 /// </summary>
-internal class CustomCallbacks : Callbacks
+public class CustomCallbacks : Callbacks
 {
     /// <summary>
     /// FMain

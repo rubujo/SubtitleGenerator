@@ -3,7 +3,7 @@
 /// <summary>
 /// 資料夾組
 /// </summary>
-internal class FolderSet
+public class FolderSet
 {
     /// <summary>
     /// Bins 資料夾的路徑

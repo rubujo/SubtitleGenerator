@@ -3,7 +3,7 @@
 /// <summary>
 /// Control 的擴充方法
 /// </summary>
-internal static class ControlExtension
+public static class ControlExtension
 {
     /// <summary>
     /// 非同步委派更新 UI

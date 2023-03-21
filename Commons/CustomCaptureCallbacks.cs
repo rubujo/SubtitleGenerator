@@ -7,7 +7,7 @@ namespace SubtitleGenerator.Commons;
 /// <summary>
 /// 自定義 CaptureCallbacks
 /// </summary>
-internal class CustomCaptureCallbacks : CaptureCallbacks
+public class CustomCaptureCallbacks : CaptureCallbacks
 {
     /// <summary>
     /// FMain
