@@ -308,7 +308,7 @@
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FMain";
-            Text = "字幕檔產生器";
+            Text = "字幕檔產生器 (GPGPU)";
             Load += FMain_Load;
             ResumeLayout(false);
             PerformLayout();
