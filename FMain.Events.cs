@@ -14,8 +14,8 @@ partial class FMain
     /// 在新段
     /// </summary>
     /// <param name="segmentData">SegmentData</param>
-    private void OnNewSegment(SegmentData segmentData)
+    public void OnNewSegment(SegmentData segmentData)
     {
-        WriteLog($"{segmentData.Start} --> {segmentData.End} : {segmentData.Text}");
+        WriteLog(this, $"{segmentData.Start} --> {segmentData.End} : {segmentData.Text}");
     }
 }

@@ -70,7 +70,7 @@
             BtnTranscribe.Name = "BtnTranscribe";
             BtnTranscribe.Size = new Size(75, 23);
             BtnTranscribe.TabIndex = 11;
-            BtnTranscribe.Text = "轉錄字幕檔";
+            BtnTranscribe.Text = "轉譯檔案";
             BtnTranscribe.UseVisualStyleBackColor = true;
             BtnTranscribe.Click += BtnTranscribe_Click;
             // 

@@ -1,5 +1,6 @@
 using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Sets;
+using SubtitleGenerator.Commons.Utils;
 
 namespace SubtitleGenerator;
 
@@ -83,7 +84,7 @@ public partial class FMain : Form
     {
         try
         {
-            // 因為會發生 System.AccessViolationException，故加入此限制。
+            // TODO: 2023-03-21 因為會發生 System.AccessViolationException，故加入此限制。
             if (CBLanguages.Text == "auto" && CBEnableSpeedUp2x.Checked)
             {
                 CBEnableSpeedUp2x.Checked = false;
@@ -167,11 +168,7 @@ public partial class FMain : Form
         {
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
-                MessageBox.Show(
-                    "請先選擇視訊或音訊檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                ShowWarnMsg(this, "請先選擇視訊或音訊檔案。");
 
                 return;
             }
@@ -188,14 +185,15 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
-            await DetectLanguage(
+            await WhisperUtil.DetectLanguage(
+                form: this,
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
                 enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
                 speedUp: false,
-                ggmlType: GetModelType(CBModels.Text),
-                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
+                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)
@@ -239,11 +237,7 @@ public partial class FMain : Form
         {
             if (string.IsNullOrEmpty(TBInputFilePath.Text))
             {
-                MessageBox.Show(
-                    "請先選擇視訊或音訊檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                ShowWarnMsg(this, "請先選擇視訊或音訊檔案。");
 
                 return;
             }
@@ -260,14 +254,15 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
-            await Transcribe(
+            await WhisperUtil.Transcribe(
+                form: this,
                 inputFilePath: TBInputFilePath.Text,
                 language: CBLanguages.Text,
                 enableTranslate: CBEnableTranslate.Checked,
                 enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
                 exportWebVtt: CBExportWebVTT.Checked,
-                ggmlType: GetModelType(CBModels.Text),
-                samplingStrategyType: GetSamplingStrategyType(CBSamplingStrategies.Text),
+                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)
@@ -309,7 +304,7 @@ public partial class FMain : Form
             // 重設控制項。 
             TBInputFilePath.Clear();
             CBModels.Text = "Small";
-            CBLanguages.Text = "en";
+            CBLanguages.Text = "auto";
             CBSamplingStrategies.Text = "Default";
             CBEnableSpeedUp2x.Checked = false;
             CBEnableTranslate.Checked = false;
