@@ -145,6 +145,8 @@ public partial class FMain : Form
         {
             TBInputFilePath,
             BtnSelectInputFile,
+            BtnDetectLanguage,
+            BtnTranscribe,
             CBModels,
             CBLanguages,
             CBEnableTranslate,
@@ -153,8 +155,6 @@ public partial class FMain : Form
             CBExportWebVTT,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
-            BtnTranscribe,
-            BtnDetectLanguage,
             BtnReset
         };
 
@@ -217,6 +217,8 @@ public partial class FMain : Form
         {
             TBInputFilePath,
             BtnSelectInputFile,
+            BtnDetectLanguage,
+            BtnTranscribe,
             CBModels,
             CBLanguages,
             CBEnableTranslate,
@@ -225,8 +227,6 @@ public partial class FMain : Form
             CBExportWebVTT,
             CBEnableOpenCCS2TWP,
             CBEnableOpenCCTW2SP,
-            BtnTranscribe,
-            BtnDetectLanguage,
             BtnReset
         };
 
@@ -309,7 +309,7 @@ public partial class FMain : Form
             // 重設控制項。 
             TBInputFilePath.Clear();
             CBModels.Text = "Small";
-            CBLanguages.Text = "zh";
+            CBLanguages.Text = "en";
             CBSamplingStrategies.Text = "Default";
             CBEnableSpeedUp2x.Checked = false;
             CBEnableTranslate.Checked = false;
