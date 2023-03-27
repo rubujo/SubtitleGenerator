@@ -293,6 +293,9 @@ public class WhisperUtil
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="n_past">數值，未知用途，預設值為 0</param>
+    /// <param name="n_best">數值，未知用途，預設值為 0</param>
+    /// <param name="beam_width">數值，用於 Beam search，預設值為 5</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
     public static async Task Transcribe(
@@ -311,6 +314,9 @@ public class WhisperUtil
         string? adapter = null,
         GgmlType ggmlType = GgmlType.Small,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int n_past = 0,
+        int n_best = 0,
+        int beam_width = 5,
         CancellationToken cancellationToken = default)
     {
         Stopwatch stopWatch = new();
@@ -366,7 +372,10 @@ public class WhisperUtil
                     language: language,
                     enableTranslate: enableTranslate,
                     enableSpeedUpAudio: enableSpeedUpAudio,
-                    samplingStrategyType: samplingStrategyType);
+                    samplingStrategyType: samplingStrategyType,
+                    n_past: n_past,
+                    n_best: n_best,
+                    beam_width: beam_width);
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
 
                 CustomCallbacks customCallbacks = new(
@@ -490,7 +499,14 @@ public class WhisperUtil
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="dropStartSilence">數值，丟棄開始靜音，預設值為 0.25f</param>
+    /// <param name="maxDuration">數值，轉譯最大間隔（秒），預設值為 11f</param>
+    /// <param name="minDuration">數值，轉譯最小間隔（秒），預設值為 7f</param>
+    /// <param name="pauseDuration">數值，暫停間隔，預設值為 0.333f</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="n_past">數值，未知用途，預設值為 0</param>
+    /// <param name="n_best">數值，未知用途，預設值為 0</param>
+    /// <param name="beam_width">數值，用於 Beam search，預設值為 5</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
     public static async Task Transcribe(
@@ -505,7 +521,14 @@ public class WhisperUtil
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
         string? adapter = null,
         GgmlType ggmlType = GgmlType.Small,
+        float dropStartSilence = 0.25f,
+        float maxDuration = 11f,
+        float minDuration = 7f,
+        float pauseDuration = 0.333f,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int n_past = 0,
+        int n_best = 0,
+        int beam_width = 5,
         CancellationToken cancellationToken = default)
     {
         Stopwatch stopWatch = new();
@@ -551,7 +574,10 @@ public class WhisperUtil
                     language: language,
                     enableTranslate: enableTranslate,
                     enableSpeedUpAudio: enableSpeedUpAudio,
-                    samplingStrategyType: samplingStrategyType);
+                    samplingStrategyType: samplingStrategyType,
+                    n_past: n_past,
+                    n_best: n_best,
+                    beam_width: beam_width);
                 using iMediaFoundation mediaFoundation = Library.initMediaFoundation();
 
                 sCaptureParams captureParams = new();
@@ -559,12 +585,10 @@ public class WhisperUtil
                 if (isStereo)
                 {
                     captureParams.flags = eCaptureFlags.Stereo;
-                    // TODO: 2023-03-20 待確認如何進行設定，
-                    // 目前已知 minDuration 或 maxDuration 的值為 0 時，會發生例外。
-                    captureParams.dropStartSilence = 0.25f;
-                    captureParams.maxDuration = 11f;
-                    captureParams.minDuration = 7f;
-                    captureParams.pauseDuration = 0.333f;
+                    captureParams.dropStartSilence = dropStartSilence;
+                    captureParams.maxDuration = maxDuration;
+                    captureParams.minDuration = minDuration;
+                    captureParams.pauseDuration = pauseDuration;
                 }
 
                 using iAudioCapture audioCapture = mediaFoundation
@@ -658,22 +682,22 @@ public class WhisperUtil
     /// </summary>
     /// <param name="model">iModel</param>
     /// <param name="language">字串，語言（兩碼），預設值為 "en"</param>
-    /// <param name="n_past">數值，未知用途，預設值為 0</param>
-    /// <param name="n_best">數值，未知用途，預設值為 0</param>
-    /// <param name="beam_width">數值，用於 Beam search，預設值為 5</param>
     /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
     /// <param name="enableSpeedUpAudio">布林值，啟用 SpeedUpAudio，預設值為 false</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="n_past">數值，未知用途，預設值為 0</param>
+    /// <param name="n_best">數值，未知用途，預設值為 0</param>
+    /// <param name="beam_width">數值，用於 Beam search，預設值為 5</param>
     /// <returns>Context</returns>
     public static Context GetContext(
         iModel model,
         string language = "en",
-        int n_past = 0,
-        int n_best = 0,
-        int beam_width = 5,
         bool enableTranslate = false,
         bool enableSpeedUpAudio = false,
-        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default)
+        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int n_past = 0,
+        int n_best = 0,
+        int beam_width = 5)
     {
         Context context = model.createContext();
 

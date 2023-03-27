@@ -206,6 +206,9 @@ public partial class FMain : Form
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+                n_past: 0,
+                n_best: 0,
+                beam_width: 5,
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)
@@ -291,6 +294,8 @@ public partial class FMain : Form
 
             PBProgress.Style = ProgressBarStyle.Marquee;
 
+            // TODO: 2023-03-20 待確認如何進行設定，目前已知 minDuration 或 maxDuration 的值為 0 時，會發生例外。
+
             // 轉譯（檔案）。
             await WhisperUtil.Transcribe(
                 form: this,
@@ -304,7 +309,14 @@ public partial class FMain : Form
                 gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                dropStartSilence: 0.25f,
+                maxDuration: 11f,
+                minDuration: 7f,
+                pauseDuration: 0.333f,
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+                n_past: 0,
+                n_best: 0,
+                beam_width: 5,
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)

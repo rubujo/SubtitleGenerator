@@ -34,7 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="OpenCCNET" Version="1.0.2" />
-    <PackageReference Include="Whisper.net" Version="1.2.1" />
+    <PackageReference Include="Whisper.net" Version="1.2.2" />
     <PackageReference Include="WhisperNet" Version="1.10.1" />
     <PackageReference Include="Xabe.FFmpeg" Version="5.2.6" />
     <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.6" />
