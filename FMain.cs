@@ -51,7 +51,6 @@ public partial class FMain : Form
     {
         try
         {
-            CBEnableSpeedUp2x_CheckedChanged(this, EventArgs.Empty);
             CBEnableTranslate_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCS2TWP_CheckedChanged(this, EventArgs.Empty);
             CBEnableOpenCCTW2SP_CheckedChanged(this, EventArgs.Empty);
@@ -72,24 +71,6 @@ public partial class FMain : Form
                 CBEnableTranslate.Checked = false;
 
                 ShowWarnMsg(this, "此選項僅於使用對非 en 語言時可以使用。");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowErrMsg(this, ex.ToString());
-        }
-    }
-
-    private void CBEnableSpeedUp2x_CheckedChanged(object sender, EventArgs e)
-    {
-        try
-        {
-            // TODO: 2023-03-21 因為會發生 System.AccessViolationException，故加入此限制。
-            if (CBLanguages.Text == "auto" && CBEnableSpeedUp2x.Checked)
-            {
-                CBEnableSpeedUp2x.Checked = false;
-
-                ShowWarnMsg(this, "此選項僅於使用對非 auto 語言時可以使用。");
             }
         }
         catch (Exception ex)
@@ -185,6 +166,7 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
+            // TODO: 2023-03-27 看未來是否開放 beamSize、patience 及 bestOf 等參數的設定。
             await WhisperUtil.DetectLanguage(
                 form: this,
                 inputFilePath: TBInputFilePath.Text,
@@ -254,6 +236,7 @@ public partial class FMain : Form
 
             SetOpenCCVariables();
 
+            // TODO: 2023-03-27 看未來是否開放 beamSize、patience 及 bestOf 等參數的設定。
             await WhisperUtil.Transcribe(
                 form: this,
                 inputFilePath: TBInputFilePath.Text,

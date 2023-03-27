@@ -1,14 +1,12 @@
-﻿using Whisper.net.Ggml;
-
-namespace Whisper.net.Ggml;
+﻿namespace Whisper.net.Ggml;
 
 /// <summary>
 /// 自定義 WhisperGgmlDownloader
-/// <para>來源：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/Ggml/WhisperGgmlDownloader.cs </para>
+/// <para>來源：https://github.com/sandrohanea/whisper.net/blob/main/Whisper.net/Ggml/WhisperGgmlDownloader.cs </para>
 /// </summary>
 public static class CustomWhisperGgmlDownloader
 {
-    private static readonly Lazy<HttpClient> httpClient = new(() => new HttpClient() 
+    private static readonly Lazy<HttpClient> httpClient = new(() => new HttpClient()
     {
         Timeout = Timeout.InfiniteTimeSpan
     });

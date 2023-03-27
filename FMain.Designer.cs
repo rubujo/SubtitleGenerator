@@ -153,7 +153,6 @@
             CBEnableSpeedUp2x.TabIndex = 5;
             CBEnableSpeedUp2x.Text = "啟用 SpeedUp2x";
             CBEnableSpeedUp2x.UseVisualStyleBackColor = true;
-            CBEnableSpeedUp2x.CheckedChanged += CBEnableSpeedUp2x_CheckedChanged;
             // 
             // CBSamplingStrategies
             // 

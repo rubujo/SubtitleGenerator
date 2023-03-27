@@ -157,6 +157,9 @@ public class WhisperUtil
     /// <param name="speedUp">布林值，是否加速，預設值為 false</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
+    /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
+    /// <param name="bestOf">bestOf，用於 SamplingStrategyType.Greedy，預設值為 1</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
     public static async Task DetectLanguage(
@@ -168,6 +171,9 @@ public class WhisperUtil
         bool speedUp = false,
         GgmlType ggmlType = GgmlType.Small,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int beamSize = 5,
+        float patience = -0.1f,
+        int bestOf = 1,
         CancellationToken cancellationToken = default)
     {
         Stopwatch stopWatch = new();
@@ -206,8 +212,6 @@ public class WhisperUtil
                 }
                 else
                 {
-                    // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/WhisperProcessorBuilder.cs#L302
-                    // 來源 2：https://github.com/ggerganov/whisper.cpp/blob/09e90680072d8ecdf02eaf21c393218385d2c616/whisper.cpp#L119
                     whisperProcessorBuilder.WithLanguage(language);
                 }
 
@@ -222,8 +226,11 @@ public class WhisperUtil
                 }
 
                 using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                    whisperProcessorBuilder,
-                    samplingStrategyType);
+                    whisperProcessorBuilder: whisperProcessorBuilder,
+                    samplingStrategyType: samplingStrategyType,
+                    beamSize: beamSize,
+                    patience: patience,
+                    bestOf: bestOf);
                 using FileStream fileStream = File.OpenRead(wavfilePath);
 
                 WaveParser waveParser = new(fileStream);
@@ -295,6 +302,9 @@ public class WhisperUtil
     /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
+    /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
+    /// <param name="bestOf">bestOf，用於 SamplingStrategyType.Greedy，預設值為 1</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task</returns>
     public static async Task Transcribe(
@@ -306,6 +316,9 @@ public class WhisperUtil
         bool exportWebVtt = false,
         GgmlType ggmlType = GgmlType.Small,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int beamSize = 5,
+        float patience = -0.1f,
+        int bestOf = 1,
         CancellationToken cancellationToken = default)
     {
         Stopwatch stopWatch = new();
@@ -350,8 +363,6 @@ public class WhisperUtil
                 }
                 else
                 {
-                    // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/WhisperProcessorBuilder.cs#L302
-                    // 來源 2：https://github.com/ggerganov/whisper.cpp/blob/09e90680072d8ecdf02eaf21c393218385d2c616/whisper.cpp#L119
                     whisperProcessorBuilder.WithLanguage(language);
                 }
 
@@ -366,8 +377,11 @@ public class WhisperUtil
                 }
 
                 using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                    whisperProcessorBuilder,
-                    samplingStrategyType);
+                    whisperProcessorBuilder: whisperProcessorBuilder,
+                    samplingStrategyType: samplingStrategyType,
+                    beamSize: beamSize,
+                    patience: patience,
+                    bestOf: bestOf);
                 using FileStream fileStream = File.OpenRead(wavfilePath);
 
                 FMain.WriteLog(form, "轉譯的內容：");
@@ -444,17 +458,21 @@ public class WhisperUtil
     /// 取得 WhisperProcessor
     /// </summary>
     /// <param name="whisperProcessorBuilder">WhisperProcessorBuilder</param>
-    /// <param name="strategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
+    /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
+    /// <param name="bestOf">bestOf，用於 SamplingStrategyType.Greedy，預設值為 1</param>
     /// <returns>WhisperProcessor</returns>
     public static WhisperProcessor GetWhisperProcessor(
         WhisperProcessorBuilder whisperProcessorBuilder,
-        SamplingStrategyType strategyType = SamplingStrategyType.Default)
+        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int beamSize = 5,
+        float patience = -0.1f,
+        int bestOf = 1)
     {
         WhisperProcessor whisperProcessor;
 
-        // TODO: 2023-03-21 待看未來是否要開放可以自己設定。
-
-        switch (strategyType)
+        switch (samplingStrategyType)
         {
             case SamplingStrategyType.Default:
                 whisperProcessor = whisperProcessorBuilder.Build();
@@ -465,11 +483,9 @@ public class WhisperUtil
                     (BeamSearchSamplingStrategyBuilder)whisperProcessorBuilder
                         .WithBeamSearchSamplingStrategy();
 
-                // 來源 1：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/BeamSearchSamplingStrategyBuilder.cs#L31
-                // 來源 2：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/BeamSearchSamplingStrategyBuilder.cs#L46
                 beamSearchSamplingStrategyBuilder
-                    .WithBeamSize(5)
-                    .WithPatience(-0.1f);
+                    .WithBeamSize(beamSize)
+                    .WithPatience(patience);
 
                 whisperProcessor = beamSearchSamplingStrategyBuilder
                     .ParentBuilder.Build();
@@ -480,8 +496,7 @@ public class WhisperUtil
                     (GreedySamplingStrategyBuilder)whisperProcessorBuilder
                         .WithGreedySamplingStrategy();
 
-                // 來源：https://github.com/sandrohanea/whisper.net/blob/0d1f691b3679c4eb2d97dcebafda1dc1d8439215/Whisper.net/GreedySamplingStrategyBuilder.cs#L31
-                greedySamplingStrategyBuilder.WithBestOf(1);
+                greedySamplingStrategyBuilder.WithBestOf(bestOf);
 
                 whisperProcessor = greedySamplingStrategyBuilder
                     .ParentBuilder.Build();
