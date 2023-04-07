@@ -6,6 +6,7 @@ using Whisper.net;
 using Whisper.net.Ggml;
 using Whisper.net.Wave;
 using System.Diagnostics;
+using NAudio.Wave;
 
 namespace SubtitleGenerator.Commons.Utils;
 
@@ -580,4 +581,130 @@ public class WhisperUtil
             } :
             segmentData.Text;
     }
+
+    /// <summary>
+    /// 音訊裝置
+    /// </summary>
+    public class AudioDevice
+    {
+        /// <summary>
+        /// 號碼
+        /// </summary>
+        public int Number { get; set; }
+
+        /// <summary>
+        /// 名稱
+        /// </summary>
+        public string? Name { get; set; }
+    }
+
+    /// <summary>
+    /// 取得音訊裝置清單
+    /// </summary>
+    /// <returns>List&lt;AudioDevice&gt;</returns>
+    public static List<AudioDevice> GetAudioDeviceList()
+    {
+        List<AudioDevice> devices = new();
+
+        int deviceCount = WaveIn.DeviceCount;
+
+        for (int i = 0; i < deviceCount; i++)
+        {
+            WaveInCapabilities waveInCapabilities = WaveIn.GetCapabilities(i);
+
+            if (waveInCapabilities.SupportsWaveFormat(SupportedWaveFormat.WAVE_FORMAT_1M16))
+            {
+                devices.Add(new AudioDevice()
+                {
+                    Number = i,
+                    Name = waveInCapabilities.ProductName
+                });
+            }
+        }
+
+        return devices;
+    }
+
+    /// <summary>
+    /// 取得音訊裝置的號碼
+    /// </summary>
+    /// <param name="deviceName">字串，音訊裝置的名稱</param>
+    /// <returns>數值</returns>
+    public static int GetDeviceNumber(string deviceName)
+    {
+        int deviceCount = WaveIn.DeviceCount;
+
+        for (int i = 0; i < deviceCount; i++)
+        {
+            WaveInCapabilities waveInCapabilities = WaveIn.GetCapabilities(i);
+
+            if (waveInCapabilities.ProductName == deviceName &&
+                waveInCapabilities.SupportsWaveFormat(SupportedWaveFormat.WAVE_FORMAT_1M16))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// 轉錄
+    /// </summary>
+    /// <param name="whisperProcessor">WhisperProcessor</param>
+    /// <param name="deviceName">字串，裝置的名稱</param>
+    public static void Transcribe(WhisperProcessor whisperProcessor, string deviceName)
+    {
+        const int audioSampleLengthS = 1;
+        const int audioSampleLengthMs = audioSampleLengthS * 1000;
+        const int totalBufferLength = 30 / audioSampleLengthS;
+
+        List<float[]> slidingBuffer = new(totalBufferLength + 1);
+
+        int deviceNumber = GetDeviceNumber(deviceName);
+
+        if (deviceNumber == -1)
+        {
+            return;
+        }
+
+        WaveInEvent waveInEvent = new()
+        {
+            DeviceNumber = deviceNumber,
+            WaveFormat = new(rate: 16000, bits: 16, channels: 1),
+            BufferMilliseconds = audioSampleLengthMs
+        };
+
+        waveInEvent.DataAvailable += WaveInDataAvailable;
+        waveInEvent.StartRecording();
+
+        void WaveInDataAvailable(object? sender, WaveInEventArgs e)
+        {
+            short[] values = new short[e.Buffer.Length / 2];
+
+            Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
+
+            float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
+
+            int silenceCount = samples.Count(x => IsSilence(x, -40));
+
+            if (silenceCount < values.Length - values.Length / 12)
+            {
+                slidingBuffer.Add(samples);
+
+                if (slidingBuffer.Count > totalBufferLength)
+                {
+                    slidingBuffer.RemoveAt(0);
+                }
+
+                whisperProcessor.Process(slidingBuffer.SelectMany(x => x).ToArray());
+            }
+        }
+    }
+
+    public static bool IsSilence(float amplitude, sbyte threshold)
+        => GetDecibelsFromAmplitude(amplitude) < threshold;
+
+    public static double GetDecibelsFromAmplitude(float amplitude)
+        => 20 * Math.Log10(Math.Abs(amplitude));
 }
