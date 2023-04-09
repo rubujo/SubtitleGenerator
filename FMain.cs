@@ -247,6 +247,18 @@ public partial class FMain : Form
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 cancellationToken: GlobalCT);
+            
+            // TODO: NAudio yest code, not worked well.
+            //await WhisperUtil.AudioTranscribe(
+            //    form: this,
+            //    deviceName: "麥克風排列 (Realtek(R) Audio)",
+            //    language: CBLanguages.Text,
+            //    enableTranslate: CBEnableTranslate.Checked,
+            //    enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
+            //    exportWebVtt: CBExportWebVTT.Checked,
+            //    ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+            //    samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+            //    cancellationToken: GlobalCT);
         }
         catch (Exception ex)
         {

@@ -7,6 +7,7 @@ using Whisper.net.Ggml;
 using Whisper.net.Wave;
 using System.Diagnostics;
 using NAudio.Wave;
+using System.IO;
 
 namespace SubtitleGenerator.Commons.Utils;
 
@@ -456,6 +457,168 @@ public class WhisperUtil
     }
 
     /// <summary>
+    /// 音訊轉譯
+    /// </summary>
+    /// <param name="form">FMain</param>
+    /// <param name="deviceName">字串，音訊裝置的名稱</param>
+    /// <param name="language">字串，語言（兩碼），預設值為 "auto"</param>
+    /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
+    /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
+    /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
+    /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
+    /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
+    /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
+    /// <param name="bestOf">bestOf，用於 SamplingStrategyType.Greedy，預設值為 1</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>Task</returns>
+    public static async Task AudioTranscribe(
+        FMain form,
+        string deviceName,
+        string language = "auto",
+        bool enableTranslate = false,
+        bool enableSpeedUp2x = false,
+        bool exportWebVtt = false,
+        GgmlType ggmlType = GgmlType.Small,
+        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
+        int beamSize = 5,
+        float patience = -0.1f,
+        int bestOf = 1,
+        CancellationToken cancellationToken = default)
+    {
+        // TODO: 2023-04-10 ref: https://github.com/sandrohanea/whisper.net/pull/9
+        WaveInEvent waveInEvent = new();
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await Task.Run(async () =>
+            {
+                List<SegmentData> segmentDataSet = new();
+
+                string modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
+
+                if (string.IsNullOrEmpty(modelFilePath))
+                {
+                    FMain.WriteLog(form, "發生錯誤：使用的模型檔案不存在或下載失敗。");
+                    FMain.WriteLog(form, "已取消轉譯作業。");
+                    FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+
+                    return;
+                }
+
+                FMain.WriteLog(form, "正在開始轉譯作業……");
+                FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+                FMain.WriteLog(form, $"使用的語言：{language}");
+                FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
+                FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
+                FMain.WriteLog(form, $"OpenCC 模式：{form.GlobalOCCMode}");
+
+                using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
+
+                WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                    .WithSegmentEventHandler(form.OnNewSegment);
+
+                if (language == "auto")
+                {
+                    whisperProcessorBuilder.WithLanguageDetection();
+                }
+                else
+                {
+                    whisperProcessorBuilder.WithLanguage(language);
+                }
+
+                if (enableTranslate)
+                {
+                    whisperProcessorBuilder.WithTranslate();
+                }
+
+                if (enableSpeedUp2x)
+                {
+                    whisperProcessorBuilder.WithSpeedUp2x();
+                }
+
+                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
+                    whisperProcessorBuilder: whisperProcessorBuilder,
+                    samplingStrategyType: samplingStrategyType,
+                    beamSize: beamSize,
+                    patience: patience,
+                    bestOf: bestOf);
+
+                const int audioSampleLengthS = 1;
+                const int audioSampleLengthMs = audioSampleLengthS * 1000;
+                const int totalBufferLength = 30 / audioSampleLengthS;
+
+                List<float[]> slidingBuffer = new(totalBufferLength + 1);
+
+                int deviceNumber = NAudioUtil.GetDeviceNumber(deviceName);
+
+                if (deviceNumber == -1)
+                {
+                    return;
+                }
+
+                waveInEvent.DeviceNumber = deviceNumber;
+                waveInEvent.WaveFormat = new(rate: 16000, bits: 16, channels: 1);
+                waveInEvent.BufferMilliseconds = audioSampleLengthMs;
+                waveInEvent.DataAvailable += async (object? sender, WaveInEventArgs e) =>
+                {
+                    short[] values = new short[e.Buffer.Length / 2];
+
+                    Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
+
+                    float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
+
+                    int silenceCount = samples.Count(x => NAudioUtil.IsSilence(x, -40));
+
+                    if (silenceCount < values.Length - values.Length / 12)
+                    {
+                        slidingBuffer.Add(samples);
+
+                        if (slidingBuffer.Count > totalBufferLength)
+                        {
+                            slidingBuffer.RemoveAt(0);
+                        }
+
+                        FMain.WriteLog(form, "轉譯的內容：");
+
+                        await foreach (SegmentData segmentData in whisperProcessor
+                            .ProcessAsync(slidingBuffer.SelectMany(x => x).ToArray(), cancellationToken))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            segmentDataSet.Add(segmentData);
+                        }
+                    }
+                };
+
+                waveInEvent.StartRecording();
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            waveInEvent.StopRecording();
+
+            FMain.WriteLog(form, "已取消轉譯作業。");
+        }
+        catch (ApplicationException ae)
+        {
+            waveInEvent.StopRecording();
+
+            FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.ShowErrMsg(form, ae.Message);
+        }
+        catch (Exception ex)
+        {
+            waveInEvent.StopRecording();
+
+            FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.ShowErrMsg(form, ex.ToString());
+        }
+    }
+
+    /// <summary>
     /// 取得 WhisperProcessor
     /// </summary>
     /// <param name="whisperProcessorBuilder">WhisperProcessorBuilder</param>
@@ -475,24 +638,12 @@ public class WhisperUtil
 
         switch (samplingStrategyType)
         {
+            default:
             case SamplingStrategyType.Default:
                 whisperProcessor = whisperProcessorBuilder.Build();
 
                 break;
             case SamplingStrategyType.Greedy:
-                BeamSearchSamplingStrategyBuilder beamSearchSamplingStrategyBuilder =
-                    (BeamSearchSamplingStrategyBuilder)whisperProcessorBuilder
-                        .WithBeamSearchSamplingStrategy();
-
-                beamSearchSamplingStrategyBuilder
-                    .WithBeamSize(beamSize)
-                    .WithPatience(patience);
-
-                whisperProcessor = beamSearchSamplingStrategyBuilder
-                    .ParentBuilder.Build();
-
-                break;
-            case SamplingStrategyType.BeamSearch:
                 GreedySamplingStrategyBuilder greedySamplingStrategyBuilder =
                     (GreedySamplingStrategyBuilder)whisperProcessorBuilder
                         .WithGreedySamplingStrategy();
@@ -503,8 +654,17 @@ public class WhisperUtil
                     .ParentBuilder.Build();
 
                 break;
-            default:
-                whisperProcessor = whisperProcessorBuilder.Build();
+            case SamplingStrategyType.BeamSearch:
+                BeamSearchSamplingStrategyBuilder beamSearchSamplingStrategyBuilder =
+                    (BeamSearchSamplingStrategyBuilder)whisperProcessorBuilder
+                        .WithBeamSearchSamplingStrategy();
+
+                beamSearchSamplingStrategyBuilder
+                    .WithBeamSize(beamSize)
+                    .WithPatience(patience);
+
+                whisperProcessor = beamSearchSamplingStrategyBuilder
+                    .ParentBuilder.Build();
 
                 break;
         }
@@ -581,130 +741,4 @@ public class WhisperUtil
             } :
             segmentData.Text;
     }
-
-    /// <summary>
-    /// 音訊裝置
-    /// </summary>
-    public class AudioDevice
-    {
-        /// <summary>
-        /// 號碼
-        /// </summary>
-        public int Number { get; set; }
-
-        /// <summary>
-        /// 名稱
-        /// </summary>
-        public string? Name { get; set; }
-    }
-
-    /// <summary>
-    /// 取得音訊裝置清單
-    /// </summary>
-    /// <returns>List&lt;AudioDevice&gt;</returns>
-    public static List<AudioDevice> GetAudioDeviceList()
-    {
-        List<AudioDevice> devices = new();
-
-        int deviceCount = WaveIn.DeviceCount;
-
-        for (int i = 0; i < deviceCount; i++)
-        {
-            WaveInCapabilities waveInCapabilities = WaveIn.GetCapabilities(i);
-
-            if (waveInCapabilities.SupportsWaveFormat(SupportedWaveFormat.WAVE_FORMAT_1M16))
-            {
-                devices.Add(new AudioDevice()
-                {
-                    Number = i,
-                    Name = waveInCapabilities.ProductName
-                });
-            }
-        }
-
-        return devices;
-    }
-
-    /// <summary>
-    /// 取得音訊裝置的號碼
-    /// </summary>
-    /// <param name="deviceName">字串，音訊裝置的名稱</param>
-    /// <returns>數值</returns>
-    public static int GetDeviceNumber(string deviceName)
-    {
-        int deviceCount = WaveIn.DeviceCount;
-
-        for (int i = 0; i < deviceCount; i++)
-        {
-            WaveInCapabilities waveInCapabilities = WaveIn.GetCapabilities(i);
-
-            if (waveInCapabilities.ProductName == deviceName &&
-                waveInCapabilities.SupportsWaveFormat(SupportedWaveFormat.WAVE_FORMAT_1M16))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    /// <summary>
-    /// 轉錄
-    /// </summary>
-    /// <param name="whisperProcessor">WhisperProcessor</param>
-    /// <param name="deviceName">字串，裝置的名稱</param>
-    public static void Transcribe(WhisperProcessor whisperProcessor, string deviceName)
-    {
-        const int audioSampleLengthS = 1;
-        const int audioSampleLengthMs = audioSampleLengthS * 1000;
-        const int totalBufferLength = 30 / audioSampleLengthS;
-
-        List<float[]> slidingBuffer = new(totalBufferLength + 1);
-
-        int deviceNumber = GetDeviceNumber(deviceName);
-
-        if (deviceNumber == -1)
-        {
-            return;
-        }
-
-        WaveInEvent waveInEvent = new()
-        {
-            DeviceNumber = deviceNumber,
-            WaveFormat = new(rate: 16000, bits: 16, channels: 1),
-            BufferMilliseconds = audioSampleLengthMs
-        };
-
-        waveInEvent.DataAvailable += WaveInDataAvailable;
-        waveInEvent.StartRecording();
-
-        void WaveInDataAvailable(object? sender, WaveInEventArgs e)
-        {
-            short[] values = new short[e.Buffer.Length / 2];
-
-            Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
-
-            float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
-
-            int silenceCount = samples.Count(x => IsSilence(x, -40));
-
-            if (silenceCount < values.Length - values.Length / 12)
-            {
-                slidingBuffer.Add(samples);
-
-                if (slidingBuffer.Count > totalBufferLength)
-                {
-                    slidingBuffer.RemoveAt(0);
-                }
-
-                whisperProcessor.Process(slidingBuffer.SelectMany(x => x).ToArray());
-            }
-        }
-    }
-
-    public static bool IsSilence(float amplitude, sbyte threshold)
-        => GetDecibelsFromAmplitude(amplitude) < threshold;
-
-    public static double GetDecibelsFromAmplitude(float amplitude)
-        => 20 * Math.Log10(Math.Abs(amplitude));
 }
