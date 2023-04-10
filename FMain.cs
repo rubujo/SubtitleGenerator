@@ -176,6 +176,9 @@ public partial class FMain : Form
                 speedUp: false,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+                beamSize: 5,
+                patience: -0.1f,
+                bestOf: 1,
                 cancellationToken: GlobalCT);
         }
         catch (Exception ex)
@@ -246,18 +249,24 @@ public partial class FMain : Form
                 exportWebVtt: CBExportWebVTT.Checked,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+                beamSize: 5,
+                patience: -0.1f,
+                bestOf: 1,
                 cancellationToken: GlobalCT);
-            
-            // TODO: NAudio yest code, not worked well.
+
+            // TODO: 2023-04-10 NAudio test code, not worked well.
             //await WhisperUtil.AudioTranscribe(
             //    form: this,
-            //    deviceName: "麥克風排列 (Realtek(R) Audio)",
+            //    deviceName: "",
             //    language: CBLanguages.Text,
             //    enableTranslate: CBEnableTranslate.Checked,
             //    enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
             //    exportWebVtt: CBExportWebVTT.Checked,
             //    ggmlType: WhisperUtil.GetModelType(CBModels.Text),
             //    samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
+            //    beamSize: 5,
+            //    patience: -0.1f,
+            //    bestOf: 1,
             //    cancellationToken: GlobalCT);
         }
         catch (Exception ex)

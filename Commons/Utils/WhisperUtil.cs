@@ -487,120 +487,101 @@ public class WhisperUtil
         CancellationToken cancellationToken = default)
     {
         // TODO: 2023-04-10 ref: https://github.com/sandrohanea/whisper.net/pull/9
-        WaveInEvent waveInEvent = new();
+        int deviceNumber = NAudioUtil.GetDeviceNumber(deviceName);
+
+        if (deviceNumber == -1)
+        {
+            return;
+        }
+
+        const int audioSampleLengthS = 1;
+        const int audioSampleLengthMs = audioSampleLengthS * 1000;
+        const int totalBufferLength = 30 / audioSampleLengthS;
+
+        List<float[]> slidingBuffer = new(totalBufferLength + 1);
+
+        WaveInEvent waveInEvent = new()
+        {
+            DeviceNumber = deviceNumber,
+            WaveFormat = new(rate: 16000, bits: 16, channels: 1),
+            BufferMilliseconds = audioSampleLengthMs
+        };
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            string modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
 
-            await Task.Run(async () =>
+            if (string.IsNullOrEmpty(modelFilePath))
             {
-                List<SegmentData> segmentDataSet = new();
+                FMain.WriteLog(form, "發生錯誤：使用的模型檔案不存在或下載失敗。");
+                FMain.WriteLog(form, "已取消轉譯作業。");
+                FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
 
-                string modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
+                return;
+            }
 
-                if (string.IsNullOrEmpty(modelFilePath))
+            FMain.WriteLog(form, "正在開始轉譯作業……");
+            FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+            FMain.WriteLog(form, $"使用的語言：{language}");
+            FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
+            FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
+            FMain.WriteLog(form, $"OpenCC 模式：{form.GlobalOCCMode}");
+
+            using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
+
+            WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                .WithSegmentEventHandler(form.OnNewSegment);
+
+            if (language == "auto")
+            {
+                whisperProcessorBuilder.WithLanguageDetection();
+            }
+            else
+            {
+                whisperProcessorBuilder.WithLanguage(language);
+            }
+
+            if (enableTranslate)
+            {
+                whisperProcessorBuilder.WithTranslate();
+            }
+
+            if (enableSpeedUp2x)
+            {
+                whisperProcessorBuilder.WithSpeedUp2x();
+            }
+
+            using WhisperProcessor whisperProcessor = GetWhisperProcessor(
+                whisperProcessorBuilder: whisperProcessorBuilder,
+                samplingStrategyType: samplingStrategyType,
+                beamSize: beamSize,
+                patience: patience,
+                bestOf: bestOf);
+
+            waveInEvent.DataAvailable += (object? sender, WaveInEventArgs e) =>
+            {
+                short[] values = new short[e.Buffer.Length / 2];
+
+                Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
+
+                float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
+
+                int silenceCount = samples.Count(x => NAudioUtil.IsSilence(x, -40));
+
+                if (silenceCount < values.Length - values.Length / 12)
                 {
-                    FMain.WriteLog(form, "發生錯誤：使用的模型檔案不存在或下載失敗。");
-                    FMain.WriteLog(form, "已取消轉譯作業。");
-                    FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
+                    slidingBuffer.Add(samples);
 
-                    return;
-                }
-
-                FMain.WriteLog(form, "正在開始轉譯作業……");
-                FMain.WriteLog(form, $"使用的模型：{ggmlType}");
-                FMain.WriteLog(form, $"使用的語言：{language}");
-                FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
-                FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
-                FMain.WriteLog(form, $"OpenCC 模式：{form.GlobalOCCMode}");
-
-                using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
-
-                WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
-                    .WithSegmentEventHandler(form.OnNewSegment);
-
-                if (language == "auto")
-                {
-                    whisperProcessorBuilder.WithLanguageDetection();
-                }
-                else
-                {
-                    whisperProcessorBuilder.WithLanguage(language);
-                }
-
-                if (enableTranslate)
-                {
-                    whisperProcessorBuilder.WithTranslate();
-                }
-
-                if (enableSpeedUp2x)
-                {
-                    whisperProcessorBuilder.WithSpeedUp2x();
-                }
-
-                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                    whisperProcessorBuilder: whisperProcessorBuilder,
-                    samplingStrategyType: samplingStrategyType,
-                    beamSize: beamSize,
-                    patience: patience,
-                    bestOf: bestOf);
-
-                const int audioSampleLengthS = 1;
-                const int audioSampleLengthMs = audioSampleLengthS * 1000;
-                const int totalBufferLength = 30 / audioSampleLengthS;
-
-                List<float[]> slidingBuffer = new(totalBufferLength + 1);
-
-                int deviceNumber = NAudioUtil.GetDeviceNumber(deviceName);
-
-                if (deviceNumber == -1)
-                {
-                    return;
-                }
-
-                waveInEvent.DeviceNumber = deviceNumber;
-                waveInEvent.WaveFormat = new(rate: 16000, bits: 16, channels: 1);
-                waveInEvent.BufferMilliseconds = audioSampleLengthMs;
-                waveInEvent.DataAvailable += async (object? sender, WaveInEventArgs e) =>
-                {
-                    short[] values = new short[e.Buffer.Length / 2];
-
-                    Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
-
-                    float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
-
-                    int silenceCount = samples.Count(x => NAudioUtil.IsSilence(x, -40));
-
-                    if (silenceCount < values.Length - values.Length / 12)
+                    if (slidingBuffer.Count > totalBufferLength)
                     {
-                        slidingBuffer.Add(samples);
-
-                        if (slidingBuffer.Count > totalBufferLength)
-                        {
-                            slidingBuffer.RemoveAt(0);
-                        }
-
-                        FMain.WriteLog(form, "轉譯的內容：");
-
-                        await foreach (SegmentData segmentData in whisperProcessor
-                            .ProcessAsync(slidingBuffer.SelectMany(x => x).ToArray(), cancellationToken))
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            segmentDataSet.Add(segmentData);
-                        }
+                        slidingBuffer.RemoveAt(0);
                     }
-                };
 
-                waveInEvent.StartRecording();
-            }, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            waveInEvent.StopRecording();
+                    whisperProcessor.Process(slidingBuffer.SelectMany(x => x).ToArray());
+                }
+            };
 
-            FMain.WriteLog(form, "已取消轉譯作業。");
+            waveInEvent.StartRecording();
         }
         catch (ApplicationException ae)
         {
