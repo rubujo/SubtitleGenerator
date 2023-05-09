@@ -1,4 +1,6 @@
-﻿namespace Whisper.net.Ggml;
+﻿// Licensed under the MIT license: https://opensource.org/licenses/MIT
+
+namespace Whisper.net.Ggml;
 
 /// <summary>
 /// 自定義 WhisperGgmlDownloader
@@ -6,12 +8,24 @@
 /// </summary>
 public static class CustomWhisperGgmlDownloader
 {
+    /// <summary>
+    /// HttpClient
+    /// </summary>
     private static readonly Lazy<HttpClient> httpClient = new(() => new HttpClient()
     {
         Timeout = Timeout.InfiniteTimeSpan
     });
 
-    public static async Task<Stream> GetGgmlModelAsync(GgmlType type, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// 取得 ggml 模型
+    /// </summary>
+    /// <param name="type">GgmlType</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>Task&lt;Stream&gt;</returns>
+    /// <exception cref="ArgumentOutOfRangeException">null</exception>
+    public static async Task<Stream> GetGgmlModelAsync(
+        GgmlType type,
+        CancellationToken cancellationToken = default)
     {
         string requestUri = type switch
         {
@@ -38,6 +52,10 @@ public static class CustomWhisperGgmlDownloader
 
         httpResponseMessage.EnsureSuccessStatusCode();
 
+#if IOS || MACCATALYST || TVOS || ANDROID || MACOS
         return await httpResponseMessage.Content.ReadAsStreamAsync(cancellationToken);
+#else
+        return await httpResponseMessage.Content.ReadAsStreamAsync(CancellationToken.None);
+#endif
     }
 }
