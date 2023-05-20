@@ -7,7 +7,6 @@ using Whisper.net.Ggml;
 using Whisper.net.Wave;
 using System.Diagnostics;
 using NAudio.Wave;
-using System.IO;
 
 namespace SubtitleGenerator.Commons.Utils;
 
