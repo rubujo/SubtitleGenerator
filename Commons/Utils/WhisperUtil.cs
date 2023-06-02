@@ -117,7 +117,7 @@ public class WhisperUtil
             {
                 FMain.WriteLog(form, $"模型檔案 {modelFileName} 不存在，正在開始下載該模型檔案……");
 
-                using Stream stream = await CustomWhisperGgmlDownloader.GetGgmlModelAsync(
+                using Stream stream = await WhisperGgmlDownloader.GetGgmlModelAsync(
                     ggmlType,
                     cancellationToken);
                 using FileStream fileStream = File.OpenWrite(modelFilePath);
