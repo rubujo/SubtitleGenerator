@@ -6,7 +6,6 @@ using Whisper.net;
 using Whisper.net.Ggml;
 using Whisper.net.Wave;
 using System.Diagnostics;
-using NAudio.Wave;
 
 namespace SubtitleGenerator.Commons.Utils;
 
@@ -55,26 +54,75 @@ public class WhisperUtil
     }
 
     /// <summary>
+    /// 取得量化類型
+    /// </summary>
+    /// <param name="value">字串</param>
+    /// <returns>QuantizationType</returns>
+    public static QuantizationType GetQuantizationType(string value)
+    {
+        return value switch
+        {
+            "No Quantization" => QuantizationType.NoQuantization,
+            "Q4_0" => QuantizationType.Q4_0,
+            "Q4_1" => QuantizationType.Q4_1,
+            "Q4_2" => QuantizationType.Q4_2,
+            "Q5_0" => QuantizationType.Q5_0,
+            "Q5_1" => QuantizationType.Q5_1,
+            "Q8_0" => QuantizationType.Q8_0,
+            _ => QuantizationType.NoQuantization
+        };
+    }
+
+    /// <summary>
     /// 取得模型檔案的名稱
     /// </summary>
     /// <param name="ggmlType">GgmlType</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <returns>字串</returns>
-    public static string GetModelFileName(GgmlType ggmlType)
+    public static string GetModelFileName(
+        GgmlType ggmlType,
+        QuantizationType quantizationType = QuantizationType.NoQuantization)
     {
-        return ggmlType switch
+        string mainFileName = ggmlType switch
         {
-            GgmlType.Tiny => "ggml-tiny.bin",
-            GgmlType.TinyEn => "ggml-tiny.en.bin",
-            GgmlType.Base => "ggml-base.bin",
-            GgmlType.BaseEn => "ggml-base.en.bin",
-            GgmlType.Small => "ggml-small.bin",
-            GgmlType.SmallEn => "ggml-small.en.bin",
-            GgmlType.Medium => "ggml-medium.bin",
-            GgmlType.MediumEn => "ggml-medium.en.bin",
-            GgmlType.LargeV1 => "ggml-large-v1.bin",
-            GgmlType.Large => "ggml-large.bin",
+            GgmlType.Tiny => "ggml-tiny",
+            GgmlType.TinyEn => "ggml-tiny.en",
+            GgmlType.Base => "ggml-base",
+            GgmlType.BaseEn => "ggml-base.en",
+            GgmlType.Small => "ggml-small",
+            GgmlType.SmallEn => "ggml-small.en",
+            GgmlType.Medium => "ggml-medium",
+            GgmlType.MediumEn => "ggml-medium.en",
+            GgmlType.LargeV1 => "ggml-large-v1",
+            GgmlType.Large => "ggml-large",
             _ => string.Empty
-        };
+        },
+        subFileName = quantizationType switch
+        {
+            QuantizationType.NoQuantization => string.Empty,
+            QuantizationType.Q4_0 => "q4_0",
+            QuantizationType.Q4_1 => "q4_1",
+            QuantizationType.Q4_2 => "q4_2",
+            QuantizationType.Q5_0 => "q5_0",
+            QuantizationType.Q5_1 => "q5_1",
+            QuantizationType.Q8_0 => "q8_0",
+            _ => string.Empty
+        },
+        extName = ".bin";
+
+        if (string.IsNullOrEmpty(mainFileName))
+        {
+            return string.Empty;
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(subFileName))
+            {
+                subFileName = $".{subFileName}";
+            }
+
+            return $"{mainFileName}{subFileName}{extName}";
+        }
     }
 
     /// <summary>
@@ -98,16 +146,18 @@ public class WhisperUtil
     /// </summary>
     /// <param name="form">FMain</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="ggmlType">QuantizationType，預設值為 GgmlType.NoQuantization</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task&lt;string&gt;，模型檔案的路徑</returns>
     public static async Task<string> CheckModelFile(
         FMain form,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         CancellationToken cancellationToken = default)
     {
         string modelFilePath = Path.Combine(
                 FolderSet.ModelsFolderPath,
-                GetModelFileName(ggmlType)),
+                GetModelFileName(ggmlType, quantizationType)),
             modelFileName = Path.GetFileName(modelFilePath);
 
         try
@@ -119,6 +169,7 @@ public class WhisperUtil
 
                 using Stream stream = await WhisperGgmlDownloader.GetGgmlModelAsync(
                     ggmlType,
+                    quantizationType,
                     cancellationToken);
                 using FileStream fileStream = File.OpenWrite(modelFilePath);
 
@@ -157,6 +208,7 @@ public class WhisperUtil
     /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
     /// <param name="speedUp">布林值，是否加速，預設值為 false</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
     /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
     /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
@@ -171,6 +223,7 @@ public class WhisperUtil
         bool enableSpeedUp2x = false,
         bool speedUp = false,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         int beamSize = 5,
         float patience = -0.1f,
@@ -187,8 +240,15 @@ public class WhisperUtil
 
             string tempFilePath = await Task.Run(async () =>
             {
-                string wavfilePath = await FFmpegUtil.ConvertToWavFile(form, inputFilePath, cancellationToken),
-                    modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
+                string wavfilePath = await FFmpegUtil.ConvertToWavFile(
+                        form,
+                        inputFilePath,
+                        cancellationToken),
+                    modelFilePath = await CheckModelFile(
+                        form,
+                        ggmlType,
+                        quantizationType,
+                        cancellationToken);
 
                 if (string.IsNullOrEmpty(modelFilePath))
                 {
@@ -201,10 +261,12 @@ public class WhisperUtil
 
                 FMain.WriteLog(form, "正在開始轉譯作業……");
                 FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+                FMain.WriteLog(form, $"使用的量化：{quantizationType}");
 
                 using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
 
                 WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                    .WithProgressHandler(form.OnProgress)
                     .WithSegmentEventHandler(form.OnNewSegment);
 
                 if (language == "auto")
@@ -302,6 +364,7 @@ public class WhisperUtil
     /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
     /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
     /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
     /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
@@ -316,6 +379,7 @@ public class WhisperUtil
         bool enableSpeedUp2x = false,
         bool exportWebVtt = false,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         int beamSize = 5,
         float patience = -0.1f,
@@ -334,8 +398,15 @@ public class WhisperUtil
             {
                 List<SegmentData> segmentDataSet = new();
 
-                string wavfilePath = await FFmpegUtil.ConvertToWavFile(form, inputFilePath, cancellationToken),
-                    modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
+                string wavfilePath = await FFmpegUtil.ConvertToWavFile(
+                        form,
+                        inputFilePath,
+                        cancellationToken),
+                    modelFilePath = await CheckModelFile(
+                        form,
+                        ggmlType,
+                        quantizationType,
+                        cancellationToken);
 
                 if (string.IsNullOrEmpty(modelFilePath))
                 {
@@ -348,6 +419,7 @@ public class WhisperUtil
 
                 FMain.WriteLog(form, "正在開始轉譯作業……");
                 FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+                FMain.WriteLog(form, $"使用的量化：{quantizationType}");
                 FMain.WriteLog(form, $"使用的語言：{language}");
                 FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
                 FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
@@ -356,6 +428,7 @@ public class WhisperUtil
                 using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
 
                 WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                    .WithProgressHandler(form.OnProgress)
                     .WithSegmentEventHandler(form.OnNewSegment);
 
                 if (language == "auto")
@@ -451,149 +524,6 @@ public class WhisperUtil
             FMain.WriteLog(form, "已取消轉譯作業。");
             FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
 
-            FMain.ShowErrMsg(form, ex.ToString());
-        }
-    }
-
-    /// <summary>
-    /// 音訊轉譯
-    /// </summary>
-    /// <param name="form">FMain</param>
-    /// <param name="deviceName">字串，音訊裝置的名稱</param>
-    /// <param name="language">字串，語言（兩碼），預設值為 "auto"</param>
-    /// <param name="enableTranslate">布林值，啟用翻譯成英文，預設值為 false</param>
-    /// <param name="enableSpeedUp2x">布林值，啟用 SpeedUp2x，預設值為 false</param>
-    /// <param name="exportWebVtt">布林值，匯出 WebVTT 格式，預設值為 false</param>
-    /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
-    /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
-    /// <param name="beamSize">beamSize，用於 SamplingStrategyType.BeamSearch，預設值為 5</param>
-    /// <param name="patience">patience，用於 SamplingStrategyType.BeamSearch，預設值為 -0.1f</param>
-    /// <param name="bestOf">bestOf，用於 SamplingStrategyType.Greedy，預設值為 1</param>
-    /// <param name="cancellationToken">CancellationToken</param>
-    /// <returns>Task</returns>
-    public static async Task AudioTranscribe(
-        FMain form,
-        string deviceName,
-        string language = "auto",
-        bool enableTranslate = false,
-        bool enableSpeedUp2x = false,
-        bool exportWebVtt = false,
-        GgmlType ggmlType = GgmlType.Small,
-        SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
-        int beamSize = 5,
-        float patience = -0.1f,
-        int bestOf = 1,
-        CancellationToken cancellationToken = default)
-    {
-        // TODO: 2023-04-10 ref: https://github.com/sandrohanea/whisper.net/pull/9
-        int deviceNumber = NAudioUtil.GetDeviceNumber(deviceName);
-
-        if (deviceNumber == -1)
-        {
-            return;
-        }
-
-        const int audioSampleLengthS = 1;
-        const int audioSampleLengthMs = audioSampleLengthS * 1000;
-        const int totalBufferLength = 30 / audioSampleLengthS;
-
-        List<float[]> slidingBuffer = new(totalBufferLength + 1);
-
-        WaveInEvent waveInEvent = new()
-        {
-            DeviceNumber = deviceNumber,
-            WaveFormat = new(rate: 16000, bits: 16, channels: 1),
-            BufferMilliseconds = audioSampleLengthMs
-        };
-
-        try
-        {
-            string modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken);
-
-            if (string.IsNullOrEmpty(modelFilePath))
-            {
-                FMain.WriteLog(form, "發生錯誤：使用的模型檔案不存在或下載失敗。");
-                FMain.WriteLog(form, "已取消轉譯作業。");
-                FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-
-                return;
-            }
-
-            FMain.WriteLog(form, "正在開始轉譯作業……");
-            FMain.WriteLog(form, $"使用的模型：{ggmlType}");
-            FMain.WriteLog(form, $"使用的語言：{language}");
-            FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
-            FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
-            FMain.WriteLog(form, $"OpenCC 模式：{form.GlobalOCCMode}");
-
-            using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
-
-            WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
-                .WithSegmentEventHandler(form.OnNewSegment);
-
-            if (language == "auto")
-            {
-                whisperProcessorBuilder.WithLanguageDetection();
-            }
-            else
-            {
-                whisperProcessorBuilder.WithLanguage(language);
-            }
-
-            if (enableTranslate)
-            {
-                whisperProcessorBuilder.WithTranslate();
-            }
-
-            if (enableSpeedUp2x)
-            {
-                whisperProcessorBuilder.WithSpeedUp2x();
-            }
-
-            using WhisperProcessor whisperProcessor = GetWhisperProcessor(
-                whisperProcessorBuilder: whisperProcessorBuilder,
-                samplingStrategyType: samplingStrategyType,
-                beamSize: beamSize,
-                patience: patience,
-                bestOf: bestOf);
-
-            waveInEvent.DataAvailable += (object? sender, WaveInEventArgs e) =>
-            {
-                short[] values = new short[e.Buffer.Length / 2];
-
-                Buffer.BlockCopy(e.Buffer, 0, values, 0, e.Buffer.Length);
-
-                float[] samples = values.Select(x => x / (short.MaxValue + 1f)).ToArray();
-
-                int silenceCount = samples.Count(x => NAudioUtil.IsSilence(x, -40));
-
-                if (silenceCount < values.Length - values.Length / 12)
-                {
-                    slidingBuffer.Add(samples);
-
-                    if (slidingBuffer.Count > totalBufferLength)
-                    {
-                        slidingBuffer.RemoveAt(0);
-                    }
-
-                    whisperProcessor.Process(slidingBuffer.SelectMany(x => x).ToArray());
-                }
-            };
-
-            waveInEvent.StartRecording();
-        }
-        catch (ApplicationException ae)
-        {
-            waveInEvent.StopRecording();
-
-            FMain.WriteLog(form, "已取消轉譯作業。");
-            FMain.ShowErrMsg(form, ae.Message);
-        }
-        catch (Exception ex)
-        {
-            waveInEvent.StopRecording();
-
-            FMain.WriteLog(form, "已取消轉譯作業。");
             FMain.ShowErrMsg(form, ex.ToString());
         }
     }

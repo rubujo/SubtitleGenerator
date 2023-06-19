@@ -28,8 +28,9 @@ partial class FMain
         });
 
         // 設定控制項的工具提示。
+        GlobalTT.SetToolTip(CBModel, "模型");
+        GlobalTT.SetToolTip(CBQuantization, "量化");
         GlobalTT.SetToolTip(CBLanguages, "語言");
-        GlobalTT.SetToolTip(CBModels, "模型");
         GlobalTT.SetToolTip(CBSamplingStrategies, "抽樣策略");
         GlobalTT.SetToolTip(CBEnableSpeedUp2x, "可能可以加快轉錄的速度，但同時也有可能會造成轉錄的內容更不精確");
         GlobalTT.SetToolTip(CBEnableTranslate, "將轉錄的內容翻譯成英文");
@@ -37,7 +38,8 @@ partial class FMain
         GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉錄的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
 
         // 設定控制項。
-        CBModels.Text = "Small";
+        CBModel.Text = "Medium";
+        CBQuantization.Text = "No Quantization";
         CBLanguages.Text = "auto";
         CBSamplingStrategies.Text = "Default";
         BtnCancel.Enabled = false;

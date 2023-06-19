@@ -11,11 +11,20 @@ partial class DesignerBlocker { }
 partial class FMain
 {
     /// <summary>
-    /// 在新段
+    /// 進度
+    /// </summary>
+    /// <param name="porgress">數值，進度</param>
+    public void OnProgress(int porgress)
+    {
+        WriteLog(this, $"進度：{porgress}%");
+    }
+
+    /// <summary>
+    /// 新段
     /// </summary>
     /// <param name="segmentData">SegmentData</param>
     public void OnNewSegment(SegmentData segmentData)
     {
-        WriteLog(this, $"{segmentData.Start} --> {segmentData.End} : {segmentData.Text}");
+        WriteLog(this, $"{segmentData.Start} --> {segmentData.End} : ({segmentData.Language}) {segmentData.Text}");
     }
 }

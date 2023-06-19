@@ -129,7 +129,8 @@ public partial class FMain : Form
             BtnSelectInputFile,
             BtnDetectLanguage,
             BtnTranscribe,
-            CBModels,
+            CBModel,
+            CBQuantization,
             CBLanguages,
             CBEnableTranslate,
             CBSamplingStrategies,
@@ -174,7 +175,8 @@ public partial class FMain : Form
                 enableTranslate: CBEnableTranslate.Checked,
                 enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
                 speedUp: false,
-                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                ggmlType: WhisperUtil.GetModelType(CBModel.Text),
+                quantizationType: WhisperUtil.GetQuantizationType(CBQuantization.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 beamSize: 5,
                 patience: -0.1f,
@@ -202,7 +204,8 @@ public partial class FMain : Form
             BtnSelectInputFile,
             BtnDetectLanguage,
             BtnTranscribe,
-            CBModels,
+            CBModel,
+            CBQuantization,
             CBLanguages,
             CBEnableTranslate,
             CBSamplingStrategies,
@@ -247,27 +250,13 @@ public partial class FMain : Form
                 enableTranslate: CBEnableTranslate.Checked,
                 enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
                 exportWebVtt: CBExportWebVTT.Checked,
-                ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                ggmlType: WhisperUtil.GetModelType(CBModel.Text),
+                quantizationType: WhisperUtil.GetQuantizationType(CBQuantization.Text),
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 beamSize: 5,
                 patience: -0.1f,
                 bestOf: 1,
                 cancellationToken: GlobalCT);
-
-            // TODO: 2023-04-10 NAudio test code, not worked well.
-            //await WhisperUtil.AudioTranscribe(
-            //    form: this,
-            //    deviceName: "",
-            //    language: CBLanguages.Text,
-            //    enableTranslate: CBEnableTranslate.Checked,
-            //    enableSpeedUp2x: CBEnableSpeedUp2x.Checked,
-            //    exportWebVtt: CBExportWebVTT.Checked,
-            //    ggmlType: WhisperUtil.GetModelType(CBModels.Text),
-            //    samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
-            //    beamSize: 5,
-            //    patience: -0.1f,
-            //    bestOf: 1,
-            //    cancellationToken: GlobalCT);
         }
         catch (Exception ex)
         {
@@ -307,7 +296,8 @@ public partial class FMain : Form
 
             // 重設控制項。 
             TBInputFilePath.Clear();
-            CBModels.Text = "Small";
+            CBModel.Text = "Medium";
+            CBQuantization.Text = "No Quantization";
             CBLanguages.Text = "auto";
             CBSamplingStrategies.Text = "Default";
             CBEnableSpeedUp2x.Checked = false;
