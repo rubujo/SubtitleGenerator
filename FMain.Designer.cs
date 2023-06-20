@@ -250,7 +250,7 @@
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FMain";
-            Text = "字幕檔產生器（CPU）";
+            Text = "字幕檔產生器（CLBlast）";
             Load += FMain_Load;
             ResumeLayout(false);
             PerformLayout();

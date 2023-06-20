@@ -1,9 +1,9 @@
-# 字幕檔產生器
+# 字幕檔產生器 (CLBlast)
 
 簡易的字幕檔產生器，透過 [sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net) 函式庫以使用 [OpenAI](https://openai.com) 所釋出的 [Whisper](https://openai.com/research/whisper) 自動語音辨識系統，將選擇的視訊或音訊檔案的聲音內容，轉譯成字幕檔案。
 
+- [CPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/main)
 - [cuBLAS 實作](https://github.com/rubujo/SubtitleGenerator/tree/cuBLAS)
-- [CLBlast 實作](https://github.com/rubujo/SubtitleGenerator/tree/CLBlast)
 - [GPGPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/GPGPU)
 
 ## 使用流程
@@ -13,6 +13,12 @@
 3. 透過 [sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net) 函式庫啟動 [Whisper](https://openai.com/research/whisper)，以轉譯輸入的檔案。
 4. 將轉譯的結果，依據選擇，產生成 [SubRip](https://zh.wikipedia.org/zh-tw/SubRip) Text 或 [WebVTT](https://developer.mozilla.org/zh-TW/docs/Web/API/WebVTT_API) 等格式的字幕檔案。
 5. 刪除於 "2." 產生的音訊檔案。
+
+### 需要的動態連結程式庫檔案
+
+- clblast.dll
+
+※需要[下載](https://github.com/CNugteren/CLBlast/releases) [CLBlast](https://github.com/CNugteren/CLBlast) 以取得上述動態連結程式庫檔案。  
 
 ## 注意事項
 
