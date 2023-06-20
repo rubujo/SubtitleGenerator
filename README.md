@@ -1,8 +1,8 @@
-# 字幕檔產生器
+# 字幕檔產生器 (cuBLAS)
 
 簡易的字幕檔產生器，透過 [sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net) 函式庫以使用 [OpenAI](https://openai.com) 所釋出的 [Whisper](https://openai.com/research/whisper) 自動語音辨識系統，將選擇的視訊或音訊檔案的聲音內容，轉譯成字幕檔案。
 
-- [cuBLAS 實作](https://github.com/rubujo/SubtitleGenerator/tree/cuBLAS)
+- [CPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/main)
 - [CLBlast 實作](https://github.com/rubujo/SubtitleGenerator/tree/CLBlast)
 - [GPGPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/GPGPU)
 
@@ -13,6 +13,15 @@
 3. 透過 [sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net) 函式庫啟動 [Whisper](https://openai.com/research/whisper)，以轉譯輸入的檔案。
 4. 將轉譯的結果，依據選擇，產生成 [SubRip](https://zh.wikipedia.org/zh-tw/SubRip) Text 或 [WebVTT](https://developer.mozilla.org/zh-TW/docs/Web/API/WebVTT_API) 等格式的字幕檔案。
 5. 刪除於 "2." 產生的音訊檔案。
+
+### 需要的動態連結程式庫檔案
+
+- cublas64_12.dll
+- cublasLt64_12.dll
+- cudart64_12.dll
+
+※需要[下載](https://developer.nvidia.com/cuda-downloads) [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) 以取得上述動態連結程式庫檔案。  
+※需要有 [NVIDIA Developer](https://developer.nvidia.com/) 帳號才可以下載。
 
 ## 注意事項
 
