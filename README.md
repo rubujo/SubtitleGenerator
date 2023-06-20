@@ -1,8 +1,10 @@
 # 字幕檔產生器
 
-簡易的字幕檔產生器，透過 [OpenAI](https://openai.com) 釋出的 [Whisper](https://openai.com/research/whisper) 自動語音辨識系統，將選擇的視訊或音訊檔案的聲音內容，轉譯成字幕檔案。
+簡易的字幕檔產生器，透過 [sandrohanea/whisper.net](https://github.com/sandrohanea/whisper.net) 函式庫以使用 [OpenAI](https://openai.com) 所釋出的 [Whisper](https://openai.com/research/whisper) 自動語音辨識系統，將選擇的視訊或音訊檔案的聲音內容，轉譯成字幕檔案。
 
-[GPGPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/gpgpu)
+- [cuBLAS 實作](https://github.com/rubujo/SubtitleGenerator/tree/cuBLAS)
+- [CLBlast 實作](https://github.com/rubujo/SubtitleGenerator/tree/CLBlast)
+- [GPGPU 實作](https://github.com/rubujo/SubtitleGenerator/tree/GPGPU)
 
 ## 使用流程
 
