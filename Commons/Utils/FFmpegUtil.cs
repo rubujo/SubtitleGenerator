@@ -126,7 +126,12 @@ public class FFmpegUtil
 
             conversion.OnProgress += (object sender, ConversionProgressEventArgs args) =>
             {
-                FMain.WriteLog(form, args?.ToString() ?? string.Empty);
+                int percent = (int)(Math.Round(args.Duration.TotalSeconds / args.TotalLength.TotalSeconds, 2) * 100);
+
+                string message = $"[Xabe.FFmpeg][進度]：處理識別：{args.ProcessId} " +
+                    $"[{args.Duration}/{args.TotalLength}] {percent}%";
+
+                FMain.WriteLog(form, message);
             };
 
             IConversionResult conversionResult = await conversion.Start(cancellationToken);
