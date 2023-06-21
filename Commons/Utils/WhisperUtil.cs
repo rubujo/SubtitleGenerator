@@ -89,26 +89,75 @@ public class WhisperUtil
     }
 
     /// <summary>
+    /// 取得量化類型
+    /// </summary>
+    /// <param name="value">字串</param>
+    /// <returns>QuantizationType</returns>
+    public static QuantizationType GetQuantizationType(string value)
+    {
+        return value switch
+        {
+            "No Quantization" => QuantizationType.NoQuantization,
+            "Q4_0" => QuantizationType.Q4_0,
+            "Q4_1" => QuantizationType.Q4_1,
+            "Q4_2" => QuantizationType.Q4_2,
+            "Q5_0" => QuantizationType.Q5_0,
+            "Q5_1" => QuantizationType.Q5_1,
+            "Q8_0" => QuantizationType.Q8_0,
+            _ => QuantizationType.NoQuantization
+        };
+    }
+
+    /// <summary>
     /// 取得模型檔案的名稱
     /// </summary>
     /// <param name="ggmlType">GgmlType</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <returns>字串</returns>
-    public static string GetModelFileName(GgmlType ggmlType)
+    public static string GetModelFileName(
+        GgmlType ggmlType,
+        QuantizationType quantizationType = QuantizationType.NoQuantization)
     {
-        return ggmlType switch
+        string mainFileName = ggmlType switch
         {
-            GgmlType.Tiny => "ggml-tiny.bin",
-            GgmlType.TinyEn => "ggml-tiny.en.bin",
-            GgmlType.Base => "ggml-base.bin",
-            GgmlType.BaseEn => "ggml-base.en.bin",
-            GgmlType.Small => "ggml-small.bin",
-            GgmlType.SmallEn => "ggml-small.en.bin",
-            GgmlType.Medium => "ggml-medium.bin",
-            GgmlType.MediumEn => "ggml-medium.en.bin",
-            GgmlType.LargeV1 => "ggml-large-v1.bin",
-            GgmlType.Large => "ggml-large.bin",
+            GgmlType.Tiny => "ggml-tiny",
+            GgmlType.TinyEn => "ggml-tiny.en",
+            GgmlType.Base => "ggml-base",
+            GgmlType.BaseEn => "ggml-base.en",
+            GgmlType.Small => "ggml-small",
+            GgmlType.SmallEn => "ggml-small.en",
+            GgmlType.Medium => "ggml-medium",
+            GgmlType.MediumEn => "ggml-medium.en",
+            GgmlType.LargeV1 => "ggml-large-v1",
+            GgmlType.Large => "ggml-large",
             _ => string.Empty
-        };
+        },
+        subFileName = quantizationType switch
+        {
+            QuantizationType.NoQuantization => string.Empty,
+            QuantizationType.Q4_0 => "q4_0",
+            QuantizationType.Q4_1 => "q4_1",
+            QuantizationType.Q4_2 => "q4_2",
+            QuantizationType.Q5_0 => "q5_0",
+            QuantizationType.Q5_1 => "q5_1",
+            QuantizationType.Q8_0 => "q8_0",
+            _ => string.Empty
+        },
+        extName = ".bin";
+
+        if (string.IsNullOrEmpty(mainFileName))
+        {
+            return string.Empty;
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(subFileName))
+            {
+                subFileName = $".{subFileName}";
+            }
+
+            return $"{mainFileName}{subFileName}{extName}";
+        }
     }
 
     /// <summary>
@@ -225,16 +274,18 @@ public class WhisperUtil
     /// </summary>
     /// <param name="from">FMain</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Task&lt;string&gt;，模型檔案的路徑</returns>
     public static async Task<string> CheckModelFile(
         FMain form,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         CancellationToken cancellationToken = default)
     {
         string modelFilePath = Path.Combine(
                 FolderSet.ModelsFolderPath,
-                GetModelFileName(ggmlType)),
+                GetModelFileName(ggmlType, quantizationType)),
             modelFileName = Path.GetFileName(modelFilePath);
 
         try
@@ -246,8 +297,9 @@ public class WhisperUtil
             {
                 FMain.WriteLog(form, $"模型檔案 {modelFileName} 不存在，正在開始下載該模型檔案……");
 
-                using Stream stream = await CustomWhisperGgmlDownloader.GetGgmlModelAsync(
+                using Stream stream = await WhisperGgmlDownloader.GetGgmlModelAsync(
                     ggmlType,
+                    quantizationType,
                     cancellationToken);
                 using FileStream fileStream = File.OpenWrite(modelFilePath);
 
@@ -292,6 +344,7 @@ public class WhisperUtil
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <param name="samplingStrategyType">SamplingStrategyType，預設值為 SamplingStrategyType.Default</param>
     /// <param name="n_past">數值，未知用途，預設值為 0</param>
     /// <param name="n_best">數值，未知用途，預設值為 0</param>
@@ -313,6 +366,7 @@ public class WhisperUtil
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
         string? adapter = null,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         SamplingStrategyType samplingStrategyType = SamplingStrategyType.Default,
         int n_past = 0,
         int n_best = 0,
@@ -334,7 +388,7 @@ public class WhisperUtil
                 string filePath = enableConvertToWav ?
                     await FFmpegUtil.ConvertToWavFile(form, inputFilePath, cancellationToken) :
                     inputFilePath,
-                    modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken),
+                    modelFilePath = await CheckModelFile(form, ggmlType, quantizationType, cancellationToken),
                     modelFileName = Path.GetFileName(modelFilePath);
 
                 if (string.IsNullOrEmpty(modelFilePath))
@@ -354,6 +408,7 @@ public class WhisperUtil
                 FMain.WriteLog(form, $"使用的 GPU 裝置：{adapter ?? "預設"}");
                 FMain.WriteLog(form, $"使用的 GPU 模型旗標：{gpuModelFlags}");
                 FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+                FMain.WriteLog(form, $"使用的量化：{quantizationType}");
                 FMain.WriteLog(form, $"使用的語言：{language}");
                 FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
                 FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");
@@ -499,6 +554,7 @@ public class WhisperUtil
     /// <param name="gpuModelFlags">eGpuModelFlags，預設值為 eGpuModelFlags.None</param>
     /// <param name="adapter">字串，GPU 裝置的名稱，預設值為 null</param>
     /// <param name="ggmlType">GgmlType，預設值為 GgmlType.Small</param>
+    /// <param name="quantizationType">QuantizationType，預設值為 QuantizationType.NoQuantization</param>
     /// <param name="dropStartSilence">數值，丟棄開始靜音，預設值為 0.25f</param>
     /// <param name="maxDuration">數值，轉譯最大間隔（秒），預設值為 11f</param>
     /// <param name="minDuration">數值，轉譯最小間隔（秒），預設值為 7f</param>
@@ -521,6 +577,7 @@ public class WhisperUtil
         eGpuModelFlags gpuModelFlags = eGpuModelFlags.None,
         string? adapter = null,
         GgmlType ggmlType = GgmlType.Small,
+        QuantizationType quantizationType = QuantizationType.NoQuantization,
         float dropStartSilence = 0.25f,
         float maxDuration = 11f,
         float minDuration = 7f,
@@ -543,7 +600,7 @@ public class WhisperUtil
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string modelFilePath = await CheckModelFile(form, ggmlType, cancellationToken),
+                string modelFilePath = await CheckModelFile(form, ggmlType, quantizationType, cancellationToken),
                     modelFileName = Path.GetFileName(modelFilePath);
 
                 if (string.IsNullOrEmpty(modelFilePath))
@@ -556,6 +613,7 @@ public class WhisperUtil
                 FMain.WriteLog(form, $"使用的 GPU 裝置：{adapter ?? "預設"}");
                 FMain.WriteLog(form, $"使用的 GPU 模型旗標：{gpuModelFlags}");
                 FMain.WriteLog(form, $"使用的模型：{ggmlType}");
+                FMain.WriteLog(form, $"使用的量化：{quantizationType}");
                 FMain.WriteLog(form, $"使用的語言：{language}");
                 FMain.WriteLog(form, $"使用的抽樣策略：{samplingStrategyType}");
                 FMain.WriteLog(form, $"使用 OpenCC：{(form.EnableOpenCC ? "是" : "否")}");

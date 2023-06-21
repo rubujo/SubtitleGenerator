@@ -106,9 +106,9 @@ public class FFmpegUtil
             // 轉換成取樣率為 16 kHz 的 WAV 檔案。
             IConversion conversion = FFmpeg.Conversions.New()
                 .AddStream(audioStreams)
-                // 來源：https://github.com/tigros/Whisperer/blob/dcdbcd8c9b01c06016272e4a6784774768b7b316/whisperer/Form1.cs#L220
+                // 參考來源：https://github.com/tigros/Whisperer/blob/dcdbcd8c9b01c06016272e4a6784774768b7b316/whisperer/Form1.cs#L220
                 // TODO: 2023-03-20 需要再觀察下列參數適不適合。
-                .AddParameter("-vn -ar 16000 -ac 1 -ab 32k -af volume=1.75")
+                .AddParameter("-vn -ar 16000 -ab 32k -af volume=1.75")
                 .SetOutputFormat(Format.wav)
                 .SetOutput(tempFilePath)
                 .SetOverwriteOutput(true);
@@ -124,7 +124,12 @@ public class FFmpegUtil
 
             conversion.OnProgress += (sender, args) =>
             {
-                FMain.WriteLog(form, args?.ToString() ?? string.Empty);
+                int percent = (int)(Math.Round(args.Duration.TotalSeconds / args.TotalLength.TotalSeconds, 2) * 100);
+
+                string message = $"[Xabe.FFmpeg][進度]：處理識別：{args.ProcessId} " +
+                    $"[{args.Duration}/{args.TotalLength}] {percent}%";
+
+                FMain.WriteLog(form, message);
             };
 
             IConversionResult conversionResult = await conversion.Start(cancellationToken);

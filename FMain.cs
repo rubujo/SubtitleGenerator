@@ -2,6 +2,7 @@ using SubtitleGenerator.Commons.Extensions;
 using SubtitleGenerator.Commons.Utils;
 using static SubtitleGenerator.Commons.Sets.EnumSet;
 using Whisper;
+using Whisper.net.Ggml;
 
 namespace SubtitleGenerator;
 
@@ -205,6 +206,7 @@ public partial class FMain : Form
                 gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                quantizationType: QuantizationType.NoQuantization,
                 samplingStrategyType: WhisperUtil.GetSamplingStrategyType(CBSamplingStrategies.Text),
                 n_past: 0,
                 n_best: 0,
@@ -309,6 +311,7 @@ public partial class FMain : Form
                 gpuModelFlags: WhisperUtil.GetGpuModelFlag(CBGpuModelFlags.Text),
                 adapter: string.IsNullOrEmpty(CBGPUs.Text) ? null : CBGPUs.Text,
                 ggmlType: WhisperUtil.GetModelType(CBModels.Text),
+                quantizationType: QuantizationType.NoQuantization,
                 dropStartSilence: 0.25f,
                 maxDuration: 11f,
                 minDuration: 7f,
@@ -371,7 +374,7 @@ public partial class FMain : Form
             }
 
             CBGpuModelFlags.Text = "Wave32";
-            CBModels.Text = "Small";
+            CBModels.Text = "Medium";
             CBSamplingStrategies.Text = "Default";
             CBLanguages.Text = "en";
 

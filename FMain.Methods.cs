@@ -41,7 +41,7 @@ partial class FMain
         GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉譯的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
 
         // 設定控制項。
-        CBModels.Text = "Small";
+        CBModels.Text = "Medium";
         CBSamplingStrategies.Text = "Default";
         CBLanguages.Text = "en";
         CBModelImplementation.Text = "GPU";
