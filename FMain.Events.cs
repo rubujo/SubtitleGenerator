@@ -1,4 +1,5 @@
-﻿using Whisper.net;
+﻿using SubtitleGenerator.Commons.Extensions;
+using Whisper.net;
 
 namespace SubtitleGenerator;
 
@@ -11,12 +12,33 @@ partial class DesignerBlocker { }
 partial class FMain
 {
     /// <summary>
+    /// 編碼器開始
+    /// </summary>
+    /// <param name="encoderBeginData">EncoderBeginData</param>
+    public bool OnEncoderBegin(EncoderBeginData encoderBeginData)
+    {
+        _ = encoderBeginData;
+
+        if (GlobalCTS.IsCancellationRequested)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
     /// 進度
     /// </summary>
     /// <param name="porgress">數值，進度</param>
     public void OnProgress(int porgress)
     {
-        WriteLog(this, $"進度：{porgress}%");
+        PBProgress.InvokeIfRequired(() =>
+        {
+            PBProgress.Value = porgress;
+        });
     }
 
     /// <summary>
@@ -25,6 +47,10 @@ partial class FMain
     /// <param name="segmentData">SegmentData</param>
     public void OnNewSegment(SegmentData segmentData)
     {
-        WriteLog(this, $"{segmentData.Start} --> {segmentData.End} : ({segmentData.Language}) {segmentData.Text}");
+        string segment = $"{segmentData.Start} --> {segmentData.End}：" +
+                $"[ {segmentData.Language} ({segmentData.Probability:P}) ] " +
+                $"{segmentData.Text}";
+
+        WriteLog(this, segment);
     }
 }

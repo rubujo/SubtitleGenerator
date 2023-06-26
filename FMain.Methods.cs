@@ -38,11 +38,30 @@ partial class FMain
         GlobalTT.SetToolTip(CBEnableOpenCCTW2SP, "使用 OpenCC 將轉錄的內容，從「繁體中文（臺灣）」轉換成「簡體中文」");
 
         // 設定控制項。
-        CBModel.Text = "Medium";
-        CBQuantization.Text = "No Quantization";
-        CBLanguages.Text = "auto";
-        CBSamplingStrategies.Text = "Default";
-        BtnCancel.Enabled = false;
+        CBModel.InvokeIfRequired(() =>
+        {
+            CBModel.Text = "Medium";
+        });
+
+        CBQuantization.InvokeIfRequired(() =>
+        {
+            CBQuantization.Text = "No Quantization";
+        });
+
+        CBLanguages.InvokeIfRequired(() =>
+        {
+            CBLanguages.Text = "auto";
+        });
+
+        CBSamplingStrategies.InvokeIfRequired(() =>
+        {
+            CBSamplingStrategies.Text = "Default";
+        });
+
+        BtnCancel.InvokeIfRequired(() =>
+        {
+            BtnCancel.Enabled = false;
+        });
 
         // 檢查資料夾。
         CheckFolders();

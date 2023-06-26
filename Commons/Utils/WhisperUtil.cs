@@ -253,19 +253,20 @@ public class WhisperUtil
                 if (string.IsNullOrEmpty(modelFilePath))
                 {
                     FMain.WriteLog(form, "發生錯誤：使用的模型檔案不存在或下載失敗。");
-                    FMain.WriteLog(form, "已取消轉譯作業。");
+                    FMain.WriteLog(form, "已取消偵測語言作業。");
                     FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
 
                     return string.Empty;
                 }
 
-                FMain.WriteLog(form, "正在開始轉譯作業……");
+                FMain.WriteLog(form, "正在開始偵測語言作業……");
                 FMain.WriteLog(form, $"使用的模型：{ggmlType}");
                 FMain.WriteLog(form, $"使用的量化：{quantizationType}");
 
                 using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
 
                 WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                    .WithEncoderBeginHandler(form.OnEncoderBegin)
                     .WithProgressHandler(form.OnProgress)
                     .WithSegmentEventHandler(form.OnNewSegment);
 
@@ -288,31 +289,53 @@ public class WhisperUtil
                     whisperProcessorBuilder.WithSpeedUp2x();
                 }
 
-                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
+                WhisperProcessor whisperProcessor = GetWhisperProcessor(
                     whisperProcessorBuilder: whisperProcessorBuilder,
                     samplingStrategyType: samplingStrategyType,
                     beamSize: beamSize,
                     patience: patience,
                     bestOf: bestOf);
+
                 using FileStream fileStream = File.OpenRead(wavfilePath);
 
                 WaveParser waveParser = new(fileStream);
 
-                float[] avgSamples = await waveParser.GetAvgSamplesAsync(cancellationToken);
+                bool isTaskCanceled = false;
 
-                string? detectedLanguage = whisperProcessor.DetectLanguage(avgSamples, speedUp: speedUp),
-                    rawResult = string.IsNullOrEmpty(detectedLanguage) ?
-                        "識別失敗。" :
-                        detectedLanguage,
-                    resultMessage = $"偵測語言結果：{rawResult}";
+                try
+                {
+                    float[] avgSamples = await waveParser.GetAvgSamplesAsync(cancellationToken);
 
-                FMain.WriteLog(form, resultMessage);
+                    (string? detectedLanguage, float? probability) = whisperProcessor
+                        .DetectLanguageWithProbability(samples: avgSamples, speedUp: speedUp);
 
-                stopWatch.Stop();
+                    string rawResult = string.IsNullOrEmpty(detectedLanguage) ?
+                            "識別失敗。" :
+                            $"{detectedLanguage}（{probability:P}）",
+                        resultMessage = $"偵測語言結果：{rawResult}";
 
-                FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+                    FMain.WriteLog(form, resultMessage);
 
-                FMain.ShowMsg(form, resultMessage);
+                    FMain.ShowMsg(form, resultMessage);
+                }
+                catch (OperationCanceledException)
+                {
+                    isTaskCanceled = true;
+
+                    stopWatch.Stop();
+
+                    FMain.WriteLog(form, "已取消偵測語言作業。");
+                    FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+                }
+
+                await whisperProcessor.DisposeAsync();
+
+                if (!isTaskCanceled)
+                {
+                    stopWatch.Stop();
+
+                    FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+                }
 
                 return wavfilePath;
             }, cancellationToken);
@@ -329,26 +352,17 @@ public class WhisperUtil
         {
             stopWatch.Stop();
 
-            FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, "已取消偵測語言作業。");
             FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
             FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-        }
-        catch (ApplicationException ae)
-        {
-            stopWatch.Stop();
-
-            FMain.WriteLog(form, "已取消轉譯作業。");
-            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
-            FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-
-            FMain.ShowErrMsg(form, ae.Message);
         }
         catch (Exception ex)
         {
             stopWatch.Stop();
 
-            FMain.WriteLog(form, "已取消轉譯作業。");
+            FMain.WriteLog(form, "已取消偵測語言作業。");
             FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+            FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
 
             FMain.ShowErrMsg(form, ex.ToString());
         }
@@ -428,8 +442,10 @@ public class WhisperUtil
                 using WhisperFactory whisperFactory = WhisperFactory.FromPath(modelFilePath);
 
                 WhisperProcessorBuilder whisperProcessorBuilder = whisperFactory.CreateBuilder()
+                    .WithEncoderBeginHandler(form.OnEncoderBegin)
                     .WithProgressHandler(form.OnProgress)
-                    .WithSegmentEventHandler(form.OnNewSegment);
+                    .WithSegmentEventHandler(form.OnNewSegment)
+                    .WithProbabilities();
 
                 if (language == "auto")
                 {
@@ -450,43 +466,63 @@ public class WhisperUtil
                     whisperProcessorBuilder.WithSpeedUp2x();
                 }
 
-                using WhisperProcessor whisperProcessor = GetWhisperProcessor(
+                WhisperProcessor whisperProcessor = GetWhisperProcessor(
                     whisperProcessorBuilder: whisperProcessorBuilder,
                     samplingStrategyType: samplingStrategyType,
                     beamSize: beamSize,
                     patience: patience,
                     bestOf: bestOf);
+
                 using FileStream fileStream = File.OpenRead(wavfilePath);
 
                 FMain.WriteLog(form, "轉譯的內容：");
 
-                await foreach (SegmentData segmentData in whisperProcessor
-                    .ProcessAsync(fileStream, cancellationToken))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
+                bool isTaskCanceled = false;
 
-                    segmentDataSet.Add(segmentData);
+                try
+                {
+                    await foreach (SegmentData segmentData in whisperProcessor
+                        .ProcessAsync(fileStream, cancellationToken))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        segmentDataSet.Add(segmentData);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    isTaskCanceled = true;
+
+                    stopWatch.Stop();
+
+                    FMain.WriteLog(form, "已取消轉譯作業。");
+                    FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
                 }
 
-                stopWatch.Stop();
+                await whisperProcessor.DisposeAsync();
 
-                FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
-                FMain.WriteLog(form, "轉譯完成。");
+                if (!isTaskCanceled)
+                {
+                    stopWatch.Stop();
 
-                // 建立字幕檔。
-                string subtitleFilePath = CreateSubtitleFile(
-                        form,
-                        segmentDataSet,
-                        inputFilePath,
-                        exportWebVtt),
-                    subtitleFileName = Path.GetFileName(subtitleFilePath),
-                    subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
-                        .Replace(subtitleFileName, string.Empty);
+                    FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+                    FMain.WriteLog(form, "轉譯完成。");
 
-                // 開啟資料夾。
-                FMain.OpenFolder(form, subtitleFileFolder);
+                    // 建立字幕檔。
+                    string subtitleFilePath = CreateSubtitleFile(
+                            form,
+                            segmentDataSet,
+                            inputFilePath,
+                            exportWebVtt),
+                        subtitleFileName = Path.GetFileName(subtitleFilePath),
+                        subtitleFileFolder = Path.GetFullPath(subtitleFilePath)
+                            .Replace(subtitleFileName, string.Empty);
 
-                FMain.ShowMsg(form, "轉譯完成。");
+                    // 開啟資料夾。
+                    FMain.OpenFolder(form, subtitleFileFolder);
+
+                    FMain.ShowMsg(form, "轉譯完成。");
+                }
 
                 return wavfilePath;
             }, cancellationToken);
@@ -507,22 +543,13 @@ public class WhisperUtil
             FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
             FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
         }
-        catch (ApplicationException ae)
-        {
-            stopWatch.Stop();
-
-            FMain.WriteLog(form, "已取消轉譯作業。");
-            FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
-            FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
-
-            FMain.ShowErrMsg(form, ae.Message);
-        }
         catch (Exception ex)
         {
             stopWatch.Stop();
 
             FMain.WriteLog(form, "已取消轉譯作業。");
             FMain.WriteLog(form, $"總共耗時：{stopWatch.Elapsed.ToFFmpeg()}");
+            FMain.WriteLog(form, $"請自行至「{FolderSet.TempFolderPath}」刪除暫存檔案。");
 
             FMain.ShowErrMsg(form, ex.ToString());
         }
@@ -596,41 +623,61 @@ public class WhisperUtil
         string inputFilePath,
         bool exportWebVTT)
     {
-        string extName = exportWebVTT ? ".vtt" : ".srt",
-            filePath = Path.ChangeExtension(inputFilePath, extName),
-            fileType = exportWebVTT ? "WebVTT" : "SubRip Text";
+        string filePath1 = Path.ChangeExtension(inputFilePath, ".srt");
 
-        FMain.WriteLog(form, $"開始建立 {fileType} 字幕檔……");
+        FMain.WriteLog(form, $"開始建立 SubRip Text 字幕檔……");
 
-        using StreamWriter streamWriter = File.CreateText(filePath);
-
-        if (exportWebVTT)
-        {
-            streamWriter.WriteLine("WEBVTT ");
-            streamWriter.WriteLine();
-        }
+        using StreamWriter streamWriter1 = File.CreateText(filePath1);
 
         for (int i = 0; i < segmentDataSet.Count; i++)
         {
-            streamWriter.WriteLine(i + 1);
+            streamWriter1.WriteLine(i + 1);
 
             SegmentData segmentData = segmentDataSet[i];
 
-            string startTime = exportWebVTT ?
-                    PrintTime(segmentData.Start) :
-                    PrintTimeWithComma(segmentData.Start),
-                endTime = exportWebVTT ?
-                    PrintTime(segmentData.End) :
-                    PrintTimeWithComma(segmentData.End);
+            string startTime = PrintTimeWithComma(segmentData.Start),
+                endTime = PrintTimeWithComma(segmentData.End);
 
-            streamWriter.WriteLine("{0} --> {1}", startTime, endTime);
-            streamWriter.WriteLine(GetSegmentDataText(form, segmentData));
-            streamWriter.WriteLine();
+            streamWriter1.WriteLine("{0} --> {1}", startTime, endTime);
+            streamWriter1.WriteLine(GetSegmentDataText(form, segmentData));
+            streamWriter1.WriteLine();
         }
 
-        FMain.WriteLog(form, $"已建立 {fileType} 字幕檔：{filePath}");
+        FMain.WriteLog(form, $"已建立 SubRip Text 字幕檔：{filePath1}");
 
-        return filePath;
+        #region WebVTT
+
+        if (exportWebVTT)
+        {
+            string filePath2 = Path.ChangeExtension(inputFilePath, ".vtt");
+
+            FMain.WriteLog(form, $"開始建立 WebVTT 字幕檔……");
+
+            using StreamWriter streamWriter2 = File.CreateText(filePath2);
+
+            streamWriter2.WriteLine("WEBVTT ");
+            streamWriter2.WriteLine();
+
+            for (int i = 0; i < segmentDataSet.Count; i++)
+            {
+                streamWriter2.WriteLine(i + 1);
+
+                SegmentData segmentData = segmentDataSet[i];
+
+                string startTime = PrintTime(segmentData.Start),
+                    endTime = PrintTime(segmentData.End);
+
+                streamWriter2.WriteLine("{0} --> {1}", startTime, endTime);
+                streamWriter2.WriteLine(GetSegmentDataText(form, segmentData));
+                streamWriter2.WriteLine();
+            }
+
+            FMain.WriteLog(form, $"已建立 WebVTT 字幕檔：{filePath2}");
+        }
+
+        #endregion
+
+        return filePath1;
     }
 
     /// <summary>
@@ -644,10 +691,10 @@ public class WhisperUtil
         return form.EnableOpenCC ?
             form.GlobalOCCMode switch
             {
-                OpenCCMode.None => segmentData.Text,
-                OpenCCMode.S2TWP => ZhConverter.HansToTW(segmentData.Text, true),
-                OpenCCMode.TW2SP => ZhConverter.TWToHans(segmentData.Text, true),
-                _ => segmentData.Text
+                OpenCCMode.None => segmentData.Text.TrimStart(),
+                OpenCCMode.S2TWP => ZhConverter.HansToTW(segmentData.Text, true).TrimStart(),
+                OpenCCMode.TW2SP => ZhConverter.TWToHans(segmentData.Text, true).TrimStart(),
+                _ => segmentData.Text.TrimStart()
             } :
             segmentData.Text;
     }

@@ -38,7 +38,10 @@ public partial class FMain : Form
 
             if (dialogResult == DialogResult.OK)
             {
-                TBInputFilePath.Text = openFileDialog.FileName;
+                TBInputFilePath.InvokeIfRequired(() =>
+                {
+                    TBInputFilePath.Text = openFileDialog.FileName;
+                });
             }
         }
         catch (Exception ex)
@@ -68,7 +71,10 @@ public partial class FMain : Form
             // 因為英文不需要再翻譯成英文，故加入此限制。
             if (CBLanguages.Text == "en" && CBEnableTranslate.Checked)
             {
-                CBEnableTranslate.Checked = false;
+                CBEnableTranslate.InvokeIfRequired(() =>
+                {
+                    CBEnableTranslate.Checked = false;
+                });
 
                 ShowWarnMsg(this, "此選項僅於使用對非 en 語言時可以使用。");
             }
@@ -85,13 +91,19 @@ public partial class FMain : Form
         {
             if (CBLanguages.Text != "zh" && CBEnableOpenCCS2TWP.Checked)
             {
-                CBEnableOpenCCS2TWP.Checked = false;
+                CBEnableOpenCCS2TWP.InvokeIfRequired(() =>
+                {
+                    CBEnableOpenCCS2TWP.Checked = false;
+                });
 
                 ShowWarnMsg(this, "此選項僅於使用 zh 語言時可以使用。");
             }
             else if (CBEnableOpenCCS2TWP.Checked && CBEnableOpenCCTW2SP.Checked)
             {
-                CBEnableOpenCCTW2SP.Checked = false;
+                CBEnableOpenCCTW2SP.InvokeIfRequired(() =>
+                {
+                    CBEnableOpenCCTW2SP.Checked = false;
+                });
             }
         }
         catch (Exception ex)
@@ -106,13 +118,19 @@ public partial class FMain : Form
         {
             if (CBLanguages.Text != "zh" && CBEnableOpenCCTW2SP.Checked)
             {
-                CBEnableOpenCCTW2SP.Checked = false;
+                CBEnableOpenCCTW2SP.InvokeIfRequired(() =>
+                {
+                    CBEnableOpenCCTW2SP.Checked = false;
+                });
 
                 ShowWarnMsg(this, "此選項僅於使用 zh 語言時可以使用。");
             }
             else if (CBEnableOpenCCTW2SP.Checked && CBEnableOpenCCS2TWP.Checked)
             {
-                CBEnableOpenCCS2TWP.Checked = false;
+                CBEnableOpenCCS2TWP.InvokeIfRequired(() =>
+                {
+                    CBEnableOpenCCS2TWP.Checked = false;
+                });
             }
         }
         catch (Exception ex)
@@ -161,9 +179,12 @@ public partial class FMain : Form
             GlobalCTS = new();
             GlobalCT = GlobalCTS.Token;
 
-            TBLog.Clear();
+            TBLog.InvokeIfRequired(TBLog.Clear);
 
-            PBProgress.Style = ProgressBarStyle.Marquee;
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Style = ProgressBarStyle.Marquee;
+            });
 
             SetOpenCCVariables();
 
@@ -192,7 +213,10 @@ public partial class FMain : Form
             ctrlSet1.SetEnabled(true);
             ctrlSet2.SetEnabled(false);
 
-            PBProgress.Style = ProgressBarStyle.Blocks;
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Style = ProgressBarStyle.Blocks;
+            });
         }
     }
 
@@ -236,9 +260,12 @@ public partial class FMain : Form
             GlobalCTS = new();
             GlobalCT = GlobalCTS.Token;
 
-            TBLog.Clear();
+            TBLog.InvokeIfRequired(TBLog.Clear);
 
-            PBProgress.Style = ProgressBarStyle.Marquee;
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Value = 0;
+            });
 
             SetOpenCCVariables();
 
@@ -267,7 +294,10 @@ public partial class FMain : Form
             ctrlSet1.SetEnabled(true);
             ctrlSet2.SetEnabled(false);
 
-            PBProgress.Style = ProgressBarStyle.Blocks;
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Value = 0;
+            });
         }
     }
 
@@ -295,17 +325,54 @@ public partial class FMain : Form
             GlobalOCCMode = EnumSet.OpenCCMode.None;
 
             // 重設控制項。 
-            TBInputFilePath.Clear();
-            CBModel.Text = "Medium";
-            CBQuantization.Text = "No Quantization";
-            CBLanguages.Text = "auto";
-            CBSamplingStrategies.Text = "Default";
-            CBEnableSpeedUp2x.Checked = false;
-            CBEnableTranslate.Checked = false;
-            CBExportWebVTT.Checked = false;
-            CBEnableOpenCCS2TWP.Checked = false;
-            CBEnableOpenCCTW2SP.Checked = false;
-            TBLog.Clear();
+            TBInputFilePath.InvokeIfRequired(TBInputFilePath.Clear);
+
+            CBModel.InvokeIfRequired(() =>
+            {
+                CBModel.Text = "Medium";
+            });
+
+            CBQuantization.InvokeIfRequired(() =>
+            {
+                CBQuantization.Text = "No Quantization";
+            });
+
+            CBLanguages.InvokeIfRequired(() =>
+            {
+                CBLanguages.Text = "auto";
+            });
+
+            CBSamplingStrategies.InvokeIfRequired(() =>
+            {
+                CBSamplingStrategies.Text = "Default";
+            });
+
+            CBEnableSpeedUp2x.InvokeIfRequired(() =>
+            {
+                CBEnableSpeedUp2x.Checked = false;
+            });
+
+            CBEnableTranslate.InvokeIfRequired(() =>
+            {
+                CBEnableTranslate.Checked = false;
+            });
+
+            CBExportWebVTT.InvokeIfRequired(() =>
+            {
+                CBExportWebVTT.Checked = false;
+            });
+
+            CBEnableOpenCCS2TWP.InvokeIfRequired(() =>
+            {
+                CBEnableOpenCCS2TWP.Checked = false;
+            });
+
+            CBEnableOpenCCTW2SP.InvokeIfRequired(() =>
+            {
+                CBEnableOpenCCTW2SP.Checked = false;
+            });
+
+            TBLog.InvokeIfRequired(TBLog.Clear);
         }
         catch (Exception ex)
         {
