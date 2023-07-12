@@ -33,8 +33,8 @@
 
   <ItemGroup>
     <PackageReference Include="OpenCCNET" Version="1.0.2" />
-    <PackageReference Include="Whisper.net" Version="1.4.5" />
-    <PackageReference Include="Whisper.net.Runtime" Version="1.4.5" />
+    <PackageReference Include="Whisper.net" Version="1.4.6" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.4.6" />
     <PackageReference Include="Xabe.FFmpeg" Version="5.2.6" />
     <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.6" />
   </ItemGroup>
