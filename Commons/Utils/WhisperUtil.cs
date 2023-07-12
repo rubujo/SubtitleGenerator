@@ -290,8 +290,6 @@ public class WhisperUtil
 
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             // 判斷模型檔案是否存在。
             if (!File.Exists(modelFilePath))
             {
@@ -845,43 +843,63 @@ public class WhisperUtil
         string inputFilePath,
         bool exportWebVTT)
     {
-        string extName = exportWebVTT ? ".vtt" : ".srt",
-            filePath = Path.ChangeExtension(inputFilePath, extName),
-            fileType = exportWebVTT ? "WebVTT" : "SubRip Text";
-
-        FMain.WriteLog(form, $"開始建立 {fileType} 字幕檔……");
-
-        using StreamWriter streamWriter = File.CreateText(filePath);
-
         ReadOnlySpan<sSegment> segments = context.results(eResultFlags.Timestamps).segments;
 
-        if (exportWebVTT)
-        {
-            streamWriter.WriteLine("WEBVTT ");
-            streamWriter.WriteLine();
-        }
+        string filePath1 = Path.ChangeExtension(inputFilePath, ".srt");
+
+        FMain.WriteLog(form, $"開始建立 SubRip Text 字幕檔……");
+
+        using StreamWriter streamWriter1 = File.CreateText(filePath1);
 
         for (int i = 0; i < segments.Length; i++)
         {
-            streamWriter.WriteLine(i + 1);
+            streamWriter1.WriteLine(i + 1);
 
             sSegment segment = segments[i];
 
-            string startTime = exportWebVTT ?
-                    PrintTime(segment.time.begin) :
-                    PrintTimeWithComma(segment.time.begin),
-                endTime = exportWebVTT ?
-                    PrintTime(segment.time.end) :
-                    PrintTimeWithComma(segment.time.end);
+            string startTime = PrintTimeWithComma(segment.time.begin),
+                endTime = PrintTimeWithComma(segment.time.end);
 
-            streamWriter.WriteLine("{0} --> {1}", startTime, endTime);
-            streamWriter.WriteLine(GetSegmentText(form, segment));
-            streamWriter.WriteLine();
+            streamWriter1.WriteLine("{0} --> {1}", startTime, endTime);
+            streamWriter1.WriteLine(GetSegmentText(form, segment));
+            streamWriter1.WriteLine();
         }
 
-        FMain.WriteLog(form, $"已建立 {fileType} 字幕檔：{filePath}");
+        FMain.WriteLog(form, $"已建立 SubRip Text 字幕檔：{filePath1}");
 
-        return filePath;
+        #region WebVTT
+
+        if (exportWebVTT)
+        {
+            string filePath2 = Path.ChangeExtension(inputFilePath, ".vtt");
+
+            FMain.WriteLog(form, $"開始建立 WebVTT 字幕檔……");
+
+            using StreamWriter streamWriter2 = File.CreateText(filePath2);
+
+            streamWriter2.WriteLine("WEBVTT ");
+            streamWriter2.WriteLine();
+
+            for (int i = 0; i < segments.Length; i++)
+            {
+                streamWriter2.WriteLine(i + 1);
+
+                sSegment segment = segments[i];
+
+                string startTime = PrintTime(segment.time.begin),
+                    endTime = PrintTime(segment.time.end);
+
+                streamWriter2.WriteLine("{0} --> {1}", startTime, endTime);
+                streamWriter2.WriteLine(GetSegmentText(form, segment));
+                streamWriter2.WriteLine();
+            }
+
+            FMain.WriteLog(form, $"已建立 WebVTT 字幕檔：{filePath2}");
+        }
+
+        #endregion
+
+        return filePath1;
     }
 
     /// <summary>
@@ -898,40 +916,60 @@ public class WhisperUtil
         string inputFilePath,
         bool exportWebVTT)
     {
-        string extName = exportWebVTT ? ".vtt" : ".srt",
-            filePath = Path.ChangeExtension(inputFilePath, extName),
-            fileType = exportWebVTT ? "WebVTT" : "SubRip Text";
+        string filePath1 = Path.ChangeExtension(inputFilePath, ".srt");
 
-        FMain.WriteLog(form, $"開始建立 {fileType} 字幕檔……");
+        FMain.WriteLog(form, $"開始建立 SubRip Text 字幕檔……");
 
-        using StreamWriter streamWriter = File.CreateText(filePath);
-
-        if (exportWebVTT)
-        {
-            streamWriter.WriteLine("WEBVTT ");
-            streamWriter.WriteLine();
-        }
+        using StreamWriter streamWriter1 = File.CreateText(filePath1);
 
         for (int i = 0; i < segments.Count; i++)
         {
-            streamWriter.WriteLine(i + 1);
+            streamWriter1.WriteLine(i + 1);
 
             sSegment segment = segments[i];
 
-            string startTime = exportWebVTT ?
-                    PrintTime(segment.time.begin) :
-                    PrintTimeWithComma(segment.time.begin),
-                endTime = exportWebVTT ?
-                    PrintTime(segment.time.end) :
-                    PrintTimeWithComma(segment.time.end);
+            string startTime = PrintTimeWithComma(segment.time.begin),
+                endTime = PrintTimeWithComma(segment.time.end);
 
-            streamWriter.WriteLine("{0} --> {1}", startTime, endTime);
-            streamWriter.WriteLine(GetSegmentText(form, segment));
-            streamWriter.WriteLine();
+            streamWriter1.WriteLine("{0} --> {1}", startTime, endTime);
+            streamWriter1.WriteLine(GetSegmentText(form, segment));
+            streamWriter1.WriteLine();
         }
 
-        FMain.WriteLog(form, $"已建立 {fileType} 字幕檔：{filePath}");
+        FMain.WriteLog(form, $"已建立 SubRip Text 字幕檔：{filePath1}");
 
-        return filePath;
+        #region WebVTT
+
+        if (exportWebVTT)
+        {
+            string filePath2 = Path.ChangeExtension(inputFilePath, ".vtt");
+
+            FMain.WriteLog(form, $"開始建立 WebVTT 字幕檔……");
+
+            using StreamWriter streamWriter2 = File.CreateText(filePath2);
+
+            streamWriter2.WriteLine("WEBVTT ");
+            streamWriter2.WriteLine();
+
+            for (int i = 0; i < segments.Count; i++)
+            {
+                streamWriter2.WriteLine(i + 1);
+
+                sSegment segment = segments[i];
+
+                string startTime = PrintTime(segment.time.begin),
+                    endTime = PrintTime(segment.time.end);
+
+                streamWriter2.WriteLine("{0} --> {1}", startTime, endTime);
+                streamWriter2.WriteLine(GetSegmentText(form, segment));
+                streamWriter2.WriteLine();
+            }
+
+            FMain.WriteLog(form, $"已建立 WebVTT 字幕檔：{filePath2}");
+        }
+
+        #endregion
+
+        return filePath1;
     }
 }
